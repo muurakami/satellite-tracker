@@ -17,6 +17,16 @@ interface SatelliteFilters {
   q?: string
 }
 
+export interface PassAlert {
+  id: string // uuid
+  satelliteId: number
+  satelliteName: string
+  aos: Date
+  maxElevationDeg: number
+  minutesUntil: number
+  dismissed: boolean
+}
+
 interface SatelliteStore {
   satellites: Satellite[]
   positions: Map<number, SatellitePosition>
@@ -30,6 +40,8 @@ interface SatelliteStore {
   isRefreshing: boolean
   // Satellite links (KSP-style)
   linkedSatellites: number[]
+  // Pass alerts
+  passAlerts: PassAlert[]
   // Actions
   setSatellites: (s: Satellite[]) => void
   updatePositions: (positions: SatellitePosition[]) => void
@@ -44,6 +56,8 @@ interface SatelliteStore {
   toggleSatelliteLink: (noradId: number) => void
   clearLinks: () => void
   getSatelliteLinks: () => SatelliteLink[]
+  addPassAlert: (alert: PassAlert) => void
+  dismissPassAlert: (id: string) => void
   // Computed getters
   filteredSatellites: () => Satellite[]
   filteredByGroups: () => Satellite[]
@@ -62,6 +76,7 @@ export const useSatelliteStore = create<SatelliteStore>((set, get) => ({
   performanceLimit: 10,
   isRefreshing: false,
   linkedSatellites: [],
+  passAlerts: [],
 
   setSatellites: (satellites) => set({ satellites }),
 
@@ -130,6 +145,23 @@ export const useSatelliteStore = create<SatelliteStore>((set, get) => ({
     }),
 
   clearLinks: () => set({ linkedSatellites: [] }),
+
+  addPassAlert: (alert) =>
+    set((state) => {
+      // Max 10 alerts - trim oldest
+      let alerts = [...state.passAlerts, alert]
+      if (alerts.length > 10) {
+        alerts = alerts.slice(-10)
+      }
+      return { passAlerts: alerts }
+    }),
+
+  dismissPassAlert: (id) =>
+    set((state) => ({
+      passAlerts: state.passAlerts.map((a) =>
+        a.id === id ? { ...a, dismissed: true } : a
+      ),
+    })),
 
   getSatelliteLinks: (): SatelliteLink[] => {
     const { linkedSatellites } = get()

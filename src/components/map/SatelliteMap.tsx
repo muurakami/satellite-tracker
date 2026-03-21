@@ -7,6 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Point } from 'geojson'
 import { useSatelliteStore } from '@/store/useSatelliteStore'
 import { useMapStore, MAP_THEMES, type MapBounds } from '@/store/useMapStore'
+import { useSimulationStore } from '@/store/useSimulationStore'
 import { getSatellites } from '@/lib/api'
 import wsClient from '@/lib/ws-client'
 import { filterByViewport } from '@/lib/viewport-filter'
@@ -58,6 +59,8 @@ export default function SatelliteMap() {
   const setMapBounds = useMapStore((s) => s.setMapBounds)
   const showHeatmap = useMapStore((s) => s.showHeatmap)
   const showClusters = useMapStore((s) => s.showClusters)
+
+  const simulationTime = useSimulationStore((s) => s.simulationTime)
 
   const workerRef = useRef<Worker | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -132,28 +135,18 @@ export default function SatelliteMap() {
     return groupFiltered.filter(s => displaySatelliteIds.has(s.noradId))
   }, [groupFiltered, displaySatelliteIds])
 
-  // Send satellites to worker for position calculation
+  // Recalculate positions when simulationTime or satellites change
+  // Timeline.tsx already runs tick() via interval when playing
   useEffect(() => {
-    if (satellitesForWorker.length === 0) return
-    if (!workerRef.current) return
+    if (!workerRef.current || satellitesForWorker.length === 0) return
+    if (!simulationTime) return
 
-    const calculate = () => {
-      if (!workerRef.current || satellitesForWorker.length === 0) return
-      const msg: WorkerMessageIn = {
-        type: 'CALCULATE',
-        payload: { satellites: satellitesForWorker, timestamp: Date.now() },
-      }
-      workerRef.current.postMessage(msg)
+    const msg: WorkerMessageIn = {
+      type: 'CALCULATE',
+      payload: { satellites: satellitesForWorker, timestamp: simulationTime.getTime() },
     }
-
-    calculate()
-    // 2 second interval — satellites move slowly, 2s is imperceptible
-    intervalRef.current = setInterval(calculate, 2000)
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [satellitesForWorker])
+    workerRef.current.postMessage(msg)
+  }, [simulationTime, satellitesForWorker])
 
   // Function to fly to selected satellite
   const flyToSelectedSatellite = useCallback(() => {
@@ -428,8 +421,8 @@ export default function SatelliteMap() {
       {/* Satellite links (KSP-style) */}
       <SatelliteLinks />
 
-      {showGroundTrack && selectedSatellite && (
-        <GroundTrack satelliteId={selectedSatellite.noradId} />
+      {showGroundTrack && (
+        <GroundTrack />
       )}
 
       {showCoverage && selectedSatellite && (

@@ -40,6 +40,9 @@ const translations = {
   'passes.title': { ru: 'Пролёты над', en: 'Passes over' },
   'passes.loading': { ru: 'Загрузка...', en: 'Loading...' },
   'passes.noFound': { ru: 'Пролёты не найдены', en: 'No passes found' },
+  'passes.empty': { ru: 'Нет пролётов', en: 'No passes' },
+  'passes.error': { ru: 'Ошибка расчёта', en: 'Calculation error' },
+  'passes.hours24': { ru: 'пролётов / 24ч', en: 'passes / 24h' },
   'passes.selected': { ru: 'Выбран', en: 'Selected' },
 
   // MapSettings

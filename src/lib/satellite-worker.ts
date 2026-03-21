@@ -55,25 +55,38 @@ function calculatePosition(
   }
 }
 
+let isCalculating = false
+
 self.onmessage = (e: MessageEvent<WorkerMessageIn>) => {
   const { type, payload } = e.data
 
   if (type === 'CALCULATE') {
-    const date = new Date(payload.timestamp)
-    const positions: SatellitePosition[] = []
+    // Skip if previous calculation is still in progress
+    if (isCalculating) return
 
-    for (const sat of payload.satellites) {
-      const pos = calculatePosition(sat, date)
-      if (pos) {
-        positions.push(pos)
+    isCalculating = true
+
+    try {
+      const date = new Date(payload.timestamp)
+      const positions: SatellitePosition[] = []
+
+      for (const sat of payload.satellites) {
+        const pos = calculatePosition(sat, date)
+        if (pos) {
+          positions.push(pos)
+        }
       }
-    }
 
-    const response: WorkerMessageOut = {
-      type: 'POSITIONS',
-      payload: positions,
-    }
+      const response: WorkerMessageOut = {
+        type: 'POSITIONS',
+        payload: positions,
+      }
 
-    self.postMessage(response)
+      self.postMessage(response)
+    } catch (err) {
+      console.error('[Worker] calculation failed:', err)
+    } finally {
+      isCalculating = false
+    }
   }
 }
