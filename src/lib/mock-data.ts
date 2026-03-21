@@ -432,6 +432,7 @@ export function getMockPassesForPoint(lat?: number, lon?: number): SatellitePass
     passes.push({
       noradId: sat.noradId,
       name: sat.name,
+      orbitType: sat.orbitType,
       aos: new Date(now + offsetMin * 60 * 1000).toISOString(),
       los: new Date(now + (offsetMin + durationMin) * 60 * 1000).toISOString(),
       maxElevationDeg: elevation,

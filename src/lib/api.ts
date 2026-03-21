@@ -34,6 +34,170 @@ const CELESTRAK_LIMIT = parseInt(
   10
 )
 
+// ===== Data Normalization =====
+// Backend uses different format for orbit_type and country - normalize to frontend format
+
+// Backend format: 'LEO_LOW_EARTH_ORBIT', 'MEO_MEDIUM_EARTH_ORBIT', etc.
+// Frontend expects: 'LEO', 'MEO', 'GEO', 'HEO'
+const ORBIT_TYPE_MAP: Record<string, OrbitType> = {
+  'LEO_LOW_EARTH_ORBIT': 'LEO',
+  'MEO_MEDIUM_EARTH_ORBIT': 'MEO',
+  'GEO_GEOSTATIONARY_EARTH_ORBIT': 'GEO',
+  'HEO_HIGHLY_ELLIPTICAL_ORBIT': 'HEO',
+  // Fallback for already normalized values
+  'LEO': 'LEO',
+  'MEO': 'MEO',
+  'GEO': 'GEO',
+  'HEO': 'HEO',
+}
+
+// Backend format: 'USA_UNITED_STATES', 'RU_RUSSIA', 'CN_CHINA', etc.
+// Frontend expects: 'USA', 'Russia', 'China'
+const COUNTRY_MAP: Record<string, string> = {
+  'USA_UNITED_STATES': 'USA',
+  'RU_RUSSIA': 'Russia',
+  'CN_CHINA': 'China',
+  'IN_INDIA': 'India',
+  'JP_JAPAN': 'Japan',
+  'FR_FRANCE': 'France',
+  'UK_UNITED_KINGDOM': 'UK',
+  'DE_GERMANY': 'Germany',
+  'IT_ITALY': 'Italy',
+  'CA_CANADA': 'Canada',
+  'BR_BRAZIL': 'Brazil',
+  'AU_AUSTRALIA': 'Australia',
+  'ES_SPAIN': 'Spain',
+  'NL_NETHERLANDS': 'Netherlands',
+  'SE_SWEDEN': 'Sweden',
+  'NO_NORWAY': 'Norway',
+  'KR_SOUTH_KOREA': 'South Korea',
+  'AR_ARGENTINA': 'Argentina',
+  'IL_ISRAEL': 'Israel',
+  'IR_IRAN': 'Iran',
+  'KP_NORTH_KOREA': 'North Korea',
+  'PK_PAKISTAN': 'Pakistan',
+  'TR_TURKEY': 'Turkey',
+  'AE_UNITED_ARAB_EMIRATES': 'UAE',
+  'SA_SAUDI_ARABIA': 'Saudi Arabia',
+  'ZA_SOUTH_AFRICA': 'South Africa',
+  'NG_NIGERIA': 'Nigeria',
+  'EG_EGYPT': 'Egypt',
+  'NZ_NEW_ZEALAND': 'New Zealand',
+  'BE_BELGIUM': 'Belgium',
+  'CH_SWITZERLAND': 'Switzerland',
+  'AT_AUSTRIA': 'Austria',
+  'PL_POLAND': 'Poland',
+  'CZ_CZECH_REPUBLIC': 'Czech Republic',
+  'HU_HUNGARY': 'Hungary',
+  'RO_ROMANIA': 'Romania',
+  'UA_UKRAINE': 'Ukraine',
+  'BY_BELARUS': 'Belarus',
+  'KZ_KAZAKHSTAN': 'Kazakhstan',
+  'VN_VIETNAM': 'Vietnam',
+  'TH_THAILAND': 'Thailand',
+  'MY_MALAYSIA': 'Malaysia',
+  'SG_SINGAPORE': 'Singapore',
+  'ID_INDONESIA': 'Indonesia',
+  'PH_PHILIPPINES': 'Philippines',
+  'MX_MEXICO': 'Mexico',
+  'CL_CHILE': 'Chile',
+  'CO_COLOMBIA': 'Colombia',
+  'PE_PERU': 'Peru',
+  'VE_VENEZUELA': 'Venezuela',
+  'DZ_ALGERIA': 'Algeria',
+  'MA_MOROCCO': 'Morocco',
+  'TN_TUNISIA': 'Tunisia',
+  'ET_ETHIOPIA': 'Ethiopia',
+  'KE_KENYA': 'Kenya',
+}
+
+interface RawSatellite {
+  noradId?: number
+  id?: number
+  name?: string
+  country?: string
+  operator?: string
+  orbitType?: string
+  orbit_type?: string
+  purpose?: string
+  purpose_type?: string
+  altitudeKm?: number
+  apogeeKm?: number
+  perigeeKm?: number
+  periodMin?: number
+  periodMinutes?: number
+  inclination?: number
+  inclinationDeg?: number
+  raan?: number
+  tle?: { line1: string; line2: string }
+  tleLine1?: string
+  tleLine2?: string
+  // Additional fields from backend
+  objectType?: string
+  eccentricity?: number
+  epochTime?: string
+}
+
+function normalizeSatellite(raw: RawSatellite): Satellite {
+  // Resolve noradId - backend may use 'id' or 'noradId'
+  const noradId = raw.noradId ?? raw.id ?? 0
+
+  // Resolve orbit type - backend may use 'orbitType' or 'orbit_type'
+  // Backend values: 'LEO_LOW_EARTH_ORBIT', 'MEO_MEDIUM_EARTH_ORBIT', etc.
+  const rawOrbitType = raw.orbitType ?? raw.orbit_type ?? 'LEO_LOW_EARTH_ORBIT'
+  const orbitType = ORBIT_TYPE_MAP[rawOrbitType] ?? 'LEO'
+
+  // Resolve country
+  // Backend values: 'USA_UNITED_STATES', 'RU_RUSSIA', 'CN_CHINA'
+  const country = COUNTRY_MAP[raw.country ?? ''] ?? raw.country ?? 'Unknown'
+
+  // Resolve purpose - default to 'unknown' if not provided
+  const rawPurpose = raw.purpose ?? raw.purpose_type ?? 'unknown'
+  const purpose: SatellitePurpose = rawPurpose === 'communications' ? 'communications' 
+    : rawPurpose === 'navigation' ? 'navigation' 
+    : rawPurpose === 'earth-observation' ? 'earth-observation' 
+    : rawPurpose === 'scientific' ? 'scientific' 
+    : 'unknown'
+
+  // Resolve altitude - backend sends apogeeKm and perigeeKm, frontend expects altitudeKm
+  // Use average of apogee and perigee as altitude
+  const altitudeKm = (raw.apogeeKm ?? 0) + (raw.perigeeKm ?? 0) > 0 
+    ? ((raw.apogeeKm ?? 0) + (raw.perigeeKm ?? 0)) / 2
+    : raw.altitudeKm ?? 0
+
+  // Resolve period - backend sends 'periodMinutes', frontend expects 'periodMin'
+  const periodMin = raw.periodMin ?? raw.periodMinutes ?? 0
+
+  // Resolve inclination - backend sends 'inclination', frontend expects 'inclinationDeg'
+  const inclinationDeg = raw.inclinationDeg ?? raw.inclination ?? undefined
+
+  // Resolve TLE - backend doesn't send TLE in list response, need separate endpoint
+  // For now, create empty TLE - will be loaded separately if needed
+  const tle = raw.tle ?? {
+    line1: raw.tleLine1 ?? '',
+    line2: raw.tleLine2 ?? '',
+  }
+
+  // Operator - not in backend response, derive from country or use 'Unknown'
+  const operator = raw.operator ?? country
+
+  return {
+    noradId,
+    name: raw.name ?? 'Unknown',
+    country,
+    operator,
+    orbitType,
+    purpose,
+    altitudeKm,
+    periodMin,
+    inclinationDeg,
+    raan: raw.raan,
+    tle,
+  }
+}
+
+// ===== API Functions =====
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, init)
   if (!res.ok) {
@@ -73,7 +237,11 @@ export async function getSatellites(filters?: {
   if (filters?.purpose) params.set('purpose', filters.purpose)
   if (filters?.q) params.set('q', filters.q)
   const qs = params.toString()
-  return request<Satellite[]>(`/api/satellites${qs ? `?${qs}` : ''}`)
+  
+  // Backend returns paginated response: { content: Satellite[], totalElements, etc }
+  const response = await request<{ content?: RawSatellite[]; data?: RawSatellite[] }>(`/api/satellites${qs ? `?${qs}` : ''}`)
+  const arr = response.content ?? response.data ?? []
+  return arr.map(normalizeSatellite)
 }
 
 export async function getSatelliteById(id: number): Promise<Satellite> {
@@ -82,7 +250,28 @@ export async function getSatelliteById(id: number): Promise<Satellite> {
     if (!sat) throw new Error(`Satellite ${id} not found`)
     return sat
   }
-  return request<Satellite>(`/api/satellites/${id}`)
+  // Backend returns paginated response wrapped in content
+  const response = await request<RawSatellite>(`/api/satellites/${id}`)
+  return normalizeSatellite(response)
+}
+
+export async function getSatelliteTLE(noradId: number): Promise<{ line1: string; line2: string }> {
+  if (USE_MOCK) {
+    const sat = getMockSatellites().find((s) => s.noradId === noradId)
+    if (!sat) throw new Error(`Satellite ${noradId} not found`)
+    return sat.tle
+  }
+  // Try to get TLE from backend
+  try {
+    const response = await request<{ tleLine1?: string; tleLine2?: string; tle?: { line1: string; line2: string } }>(
+      `/api/satellites/${noradId}/tle`
+    )
+    return response.tle ?? { line1: response.tleLine1 ?? '', line2: response.tleLine2 ?? '' }
+  } catch {
+    // If TLE endpoint doesn't exist, try to get from main endpoint
+    const sat = await request<RawSatellite>(`/api/satellites/${noradId}`)
+    return sat.tle ?? { line1: sat.tleLine1 ?? '', line2: sat.tleLine2 ?? '' }
+  }
 }
 
 export async function getSatellitePosition(

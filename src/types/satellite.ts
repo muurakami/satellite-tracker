@@ -114,9 +114,18 @@ export interface SatellitePosition {
 export interface SatellitePass {
   noradId: number
   name: string
+  orbitType: OrbitType
   aos: string // ISO-8601
   los: string // ISO-8601
   maxElevationDeg: number
+}
+
+export interface GeoSatelliteVisible {
+  noradId: number
+  name: string
+  orbitType: 'GEO'
+  elevationDeg: number
+  azimuthDeg: number
 }
 
 export interface Subscription {

@@ -19,6 +19,7 @@ import ClusterMarker from './ClusterMarker'
 import SatelliteLinks from './SatelliteLinks'
 import CoordinateGrid from './CoordinateGrid'
 import Terminator from './Terminator'
+import ObservationPins from './ObservationPins'
 
 const ORBIT_COLORS: Record<OrbitType, string> = {
   LEO: '#00ff88',
@@ -51,6 +52,9 @@ export default function SatelliteMap() {
   const showGroundTrack = useMapStore((s) => s.showGroundTrack)
   const showCoverage = useMapStore((s) => s.showCoverage)
   const setSelectedPoint = useMapStore((s) => s.setSelectedPoint)
+  const addObservationPoint = useMapStore((s) => s.addObservationPoint)
+  const isAddingPoint = useMapStore((s) => s.isAddingPoint)
+  const toggleAddingPoint = useMapStore((s) => s.toggleAddingPoint)
   const mapTheme = useMapStore((s) => s.mapTheme)
   const selectedSatelliteColor = useMapStore((s) => s.selectedSatelliteColor)
   const is3DMode = useMapStore((s) => s.is3DMode)
@@ -172,6 +176,24 @@ export default function SatelliteMap() {
     }
   }, [flyToSelectedSatellite])
 
+  // Listen for fly-to event from LocationPresets
+  useEffect(() => {
+    const handleFlyTo = (e: Event) => {
+      const customEvent = e as CustomEvent<{ lat: number; lon: number; zoom: number; duration: number }>
+      if (!mapRef.current || !customEvent.detail) return
+      const { lat, lon, zoom, duration } = customEvent.detail
+      mapRef.current.flyTo({
+        center: [lon, lat],
+        zoom: zoom ?? 10,
+        duration: duration ?? 1200,
+      })
+    }
+    window.addEventListener('satellite-tracker:fly-to', handleFlyTo)
+    return () => {
+      window.removeEventListener('satellite-tracker:fly-to', handleFlyTo)
+    }
+  }, [])
+
   // ===== STEP 3: Convert to GeoJSON features (depends on positions) =====
   // This is the ONLY place where positions dependency triggers re-render
   const satelliteFeatures: SatelliteFeature[] = useMemo(() => {
@@ -250,10 +272,15 @@ export default function SatelliteMap() {
         }
       }
 
-      // Otherwise, set selected point
-      setSelectedPoint({ lat: e.lngLat.lat, lon: e.lngLat.lng })
+      // If in adding mode - add observation point and exit mode
+      if (isAddingPoint) {
+        addObservationPoint(e.lngLat.lat, e.lngLat.lng)
+        toggleAddingPoint()
+        return
+      }
+      // Otherwise do nothing (only explicit button adds points now)
     },
-    [satellites, selectSatellite, setSelectedPoint]
+    [satellites, selectSatellite, isAddingPoint, addObservationPoint, toggleAddingPoint]
   )
 
   // Update bounds on map move
@@ -316,11 +343,14 @@ export default function SatelliteMap() {
           ])
         }
       }}
-      style={{ width: '100%', height: '100%' }}
+      style={{ width: '100%', height: '100%', cursor: isAddingPoint ? 'crosshair' : undefined }}
       mapStyle={mapStyle}
       mapLib={maplibregl}
     >
-      <NavigationControl position="top-right" />
+      <NavigationControl position="top-right" style={{ marginTop: '52px' }} />
+
+      {/* Draggable observation point pins */}
+      <ObservationPins />
 
       {/* Terminator (day/night) - rendered first so satellites appear on top */}
       <Terminator />

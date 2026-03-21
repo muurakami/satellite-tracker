@@ -44,6 +44,12 @@ const translations = {
   'passes.error': { ru: 'Ошибка расчёта', en: 'Calculation error' },
   'passes.hours24': { ru: 'пролётов / 24ч', en: 'passes / 24h' },
   'passes.selected': { ru: 'Выбран', en: 'Selected' },
+  'passes.geo_visible': { ru: 'Геостационарные (всегда видимы)', en: 'Geostationary (always visible)' },
+
+  // Location Presets
+  'presets.title': { ru: 'Быстрые точки', en: 'Quick points' },
+  'presets.add': { ru: 'Добавить', en: 'Add' },
+  'presets.exists': { ru: 'Уже добавлена', en: 'Already added' },
 
   // MapSettings
   'settings.title': { ru: 'Настройки карты', en: 'Map Settings' },
@@ -64,6 +70,21 @@ const translations = {
   // Timeline
   'timeline.realtime': { ru: 'Реальное время', en: 'Real-time' },
   'timeline.speed': { ru: 'Скорость', en: 'Speed' },
+
+  // Points / Observation Points
+  'points.add': { ru: 'Создать точку наблюдения', en: 'Add observation point' },
+  'points.add_short': { ru: '+ Точка', en: '+ Point' },
+  'points.limit': { ru: 'Максимум 5 точек', en: 'Maximum 5 points' },
+  'points.empty': { ru: 'Нет точек наблюдения', en: 'No observation points' },
+  'points.hint': { ru: 'Нажмите на карту для добавления', en: 'Click on the map to add' },
+  'points.active': { ru: 'Отслеживается', en: 'Tracking' },
+  'points.remove': { ru: 'Удалить', en: 'Remove' },
+  'points.label': { ru: 'Точка {n}', en: 'Point {n}' },
+  'points.coordinates': { ru: '{lat}° {latDir} {lon}° {lonDir}', en: '{lat}° {latDir} {lon}° {lonDir}' },
+  'points.passes_for': { ru: 'Пролёты над {label}', en: 'Passes over {label}' },
+  'points.drag_hint': { ru: 'Перетащите для перемещения', en: 'Drag to move' },
+  'points.click_hint': { ru: 'Клик — активировать', en: 'Click to activate' },
+  'points.cancel': { ru: 'Отмена', en: 'Cancel' },
 
   // Purpose names
   'purpose.communications': { ru: 'Связь', en: 'Communications' },

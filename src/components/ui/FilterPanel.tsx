@@ -7,6 +7,8 @@ import type { OrbitType, SatellitePurpose } from '@/types/satellite'
 import { t } from '@/lib/i18n'
 import { fetchCelesTrakTLEFromText } from '@/lib/celestrak'
 import GroupSelector from './GroupSelector'
+import AddPointButton from './AddPointButton'
+import LocationPresets from './LocationPresets'
 
 const ORBIT_OPTIONS: (OrbitType | '')[] = ['', 'LEO', 'MEO', 'GEO', 'HEO']
 const PURPOSE_OPTIONS: (SatellitePurpose | '')[] = [
@@ -196,6 +198,12 @@ export default function FilterPanel() {
           <span className="text-amber-400 ml-1">({t('filters.showing', locale)} {performanceLimit})</span>
         )}
       </p>
+
+      {/* Add observation point button */}
+      <div className="mt-3 border-t border-zinc-700 pt-3">
+        <AddPointButton />
+        <LocationPresets />
+      </div>
     </div>
   )
 }

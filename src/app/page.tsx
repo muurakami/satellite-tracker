@@ -8,6 +8,7 @@ import Timeline from '@/components/ui/Timeline'
 import NotificationToast from '@/components/ui/NotificationToast'
 import MapSettings from '@/components/ui/MapSettings'
 import ZoomIndicator from '@/components/ui/ZoomIndicator'
+import PointsPanel from '@/components/ui/PointsPanel'
 import { useMapStore } from '@/store/useMapStore'
 
 const SatelliteMap = dynamic(
@@ -36,6 +37,7 @@ export default function Home() {
         <SatelliteCard />
         <MapSettings />
         <PassList />
+        <PointsPanel />
         <Timeline />
         <NotificationToast />
         <ZoomIndicator />

@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useMapStore } from '@/store/useMapStore'
 import { useSatelliteStore } from '@/store/useSatelliteStore'
+import { useSimulationStore } from '@/store/useSimulationStore'
 import { getPassesForPoint } from '@/lib/api'
-import { calculatePasses } from '@/lib/pass-predictor'
+import { calculatePasses, calculateGeoVisible } from '@/lib/pass-predictor'
 import { t } from '@/lib/i18n'
-import type { SatellitePass } from '@/types/satellite'
+import type { SatellitePass, GeoSatelliteVisible } from '@/types/satellite'
 
 function formatCoord(lat: number, lon: number): string {
   const latDir = lat >= 0 ? 'N' : 'S'
@@ -48,14 +49,17 @@ export default function PassList() {
   const satellites = useSatelliteStore((s) => s.satellites)
   const selectSatellite = useSatelliteStore((s) => s.selectSatellite)
   const selectedSatellite = useSatelliteStore((s) => s.selectedSatellite)
+  const simulationTime = useSimulationStore((s) => s.simulationTime)
 
   const [passes, setPasses] = useState<SatellitePass[]>([])
+  const [geoVisible, setGeoVisible] = useState<GeoSatelliteVisible[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
 
   useEffect(() => {
     if (!selectedPoint) {
       setPasses([])
+      setGeoVisible([])
       return
     }
 
@@ -63,11 +67,17 @@ export default function PassList() {
     setLoading(true)
     setError(false)
 
+    // Use simulationTime or fall back to real now
+    const timeToUse = simulationTime || new Date()
+
     // Try API first, fallback to client-side calculation
     getPassesForPoint(selectedPoint.lat, selectedPoint.lon, 24)
       .then((data) => {
         if (!cancelled) {
           setPasses(data)
+          // Also calculate GEO visibility
+          const geo = calculateGeoVisible(satellites, selectedPoint.lat, selectedPoint.lon, timeToUse)
+          setGeoVisible(geo)
           setError(false)
         }
       })
@@ -79,9 +89,12 @@ export default function PassList() {
               satellites,
               selectedPoint.lat,
               selectedPoint.lon,
-              24
+              24,
+              timeToUse
             )
+            const geo = calculateGeoVisible(satellites, selectedPoint.lat, selectedPoint.lon, timeToUse)
             setPasses(calculated)
+            setGeoVisible(geo)
             setError(false)
           } catch {
             setError(true)
@@ -95,7 +108,7 @@ export default function PassList() {
     return () => {
       cancelled = true
     }
-  }, [selectedPoint, satellites])
+  }, [selectedPoint, satellites, simulationTime])
 
   // Refresh every 30 seconds
   useEffect(() => {
@@ -153,12 +166,13 @@ export default function PassList() {
           </p>
         )}
 
-        {!loading && !error && passes.length === 0 && (
+        {!loading && !error && passes.length === 0 && geoVisible.length === 0 && (
           <p className="text-zinc-400 text-sm text-center py-4">
             {t('passes.empty', locale)}
           </p>
         )}
 
+        {/* Regular passes */}
         {!loading && !error && passes.length > 0 && (
           <div className="space-y-2">
             {passes.map((pass, i) => {
@@ -197,6 +211,42 @@ export default function PassList() {
                 </button>
               )
             })}
+          </div>
+        )}
+
+        {/* GEO satellites section */}
+        {!loading && !error && geoVisible.length > 0 && (
+          <div className="mt-3 border-t border-white/10 pt-3">
+            <div className="text-xs text-white/40 mb-2">
+              {t('passes.geo_visible', locale)} ({geoVisible.length})
+            </div>
+            <div className="space-y-1">
+              {geoVisible.map((geo) => {
+                const isSelected = selectedSatellite?.noradId === geo.noradId
+
+                return (
+                  <button
+                    key={geo.noradId}
+                    onClick={() => {
+                      const sat = satellites.find((s) => s.noradId === geo.noradId)
+                      if (sat) selectSatellite(sat)
+                    }}
+                    className={`w-full flex items-center justify-between text-left px-2 py-1.5 rounded transition-colors ${
+                      isSelected
+                        ? 'bg-[#ff4466]/20 ring-1 ring-[#ff4466]'
+                        : 'hover:bg-zinc-800'
+                    }`}
+                  >
+                    <span className="text-xs truncate text-[#ff4466] flex-1">
+                      {geo.name}
+                    </span>
+                    <span className="text-xs text-white/60 ml-2">
+                      ↑ {geo.elevationDeg.toFixed(1)}°
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>

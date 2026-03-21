@@ -1,5 +1,5 @@
 import * as satellite from 'satellite.js'
-import type { Satellite, SatellitePass } from '@/types/satellite'
+import type { Satellite, SatellitePass, GeoSatelliteVisible, OrbitType } from '@/types/satellite'
 
 interface PassEvent {
   time: Date
@@ -7,13 +7,15 @@ interface PassEvent {
   inPass: boolean
 }
 
+const MIN_ELEVATION_DEG = 2 // Lower threshold from 5° to 2°
+
 export function calculatePasses(
   satellites: Satellite[],
   lat: number,
   lon: number,
-  hours: number = 24
+  hours: number = 24,
+  fromTime: Date = new Date()
 ): SatellitePass[] {
-  // GEO satellites never "pass" over a point in classical sense - they stay fixed
   // Filter to LEO/MEO/HEO only, cap at 200 for performance
   const candidates = satellites
     .filter((s) => s.orbitType !== 'GEO')
@@ -25,9 +27,8 @@ export function calculatePasses(
     height: 0, // km
   }
 
-  const now = new Date()
-  const endTime = new Date(now.getTime() + hours * 60 * 60 * 1000)
-  const stepMs = 30 * 1000 // 30 seconds
+  const startTimeMs = fromTime.getTime()
+  const endTimeMs = fromTime.getTime() + hours * 60 * 60 * 1000
 
   const passes: SatellitePass[] = []
 
@@ -37,10 +38,14 @@ export function calculatePasses(
       if (!satrec) continue
 
       const passEvents: PassEvent[] = []
-      let currentTime = new Date(now)
+      let currentTimeMs = startTimeMs
+
+      // Adaptive step size: 15s for low LEO (< 600km), 30s for others
+      const stepMs = sat.altitudeKm < 600 ? 15000 : 30000
 
       // Walk through time window
-      while (currentTime <= endTime) {
+      while (currentTimeMs <= endTimeMs) {
+        const currentTime = new Date(currentTimeMs)
         const result = satellite.propagate(satrec, currentTime)
 
         if (
@@ -69,7 +74,7 @@ export function calculatePasses(
           })
         }
 
-        currentTime = new Date(currentTime.getTime() + stepMs)
+        currentTimeMs = currentTimeMs + stepMs
       }
 
       // Find passes (AOS -> LOS transitions)
@@ -92,10 +97,11 @@ export function calculatePasses(
           // LOS - exiting pass
           inPass = false
 
-          if (aosTime && maxElevation >= 5) {
+          if (aosTime && maxElevation >= MIN_ELEVATION_DEG) {
             passes.push({
               noradId: sat.noradId,
               name: sat.name,
+              orbitType: sat.orbitType,
               aos: aosTime.toISOString(),
               los: event.time.toISOString(),
               maxElevationDeg: maxElevation,
@@ -108,12 +114,13 @@ export function calculatePasses(
       }
 
       // Handle pass that extends beyond end of window
-      if (inPass && aosTime && maxElevation >= 5) {
+      if (inPass && aosTime && maxElevation >= MIN_ELEVATION_DEG) {
         passes.push({
           noradId: sat.noradId,
           name: sat.name,
+          orbitType: sat.orbitType,
           aos: aosTime.toISOString(),
-          los: endTime.toISOString(),
+          los: new Date(endTimeMs).toISOString(),
           maxElevationDeg: maxElevation,
         })
       }
@@ -128,4 +135,63 @@ export function calculatePasses(
 
   // Limit to first 50 results
   return passes.slice(0, 50)
+}
+
+export function calculateGeoVisible(
+  satellites: Satellite[],
+  lat: number,
+  lon: number,
+  atTime: Date = new Date()
+): GeoSatelliteVisible[] {
+  // Filter to GEO only
+  const geoSatellites = satellites.filter((s) => s.orbitType === 'GEO')
+
+  const observerGd = {
+    longitude: satellite.degreesToRadians(lon),
+    latitude: satellite.degreesToRadians(lat),
+    height: 0, // km
+  }
+
+  const visible: GeoSatelliteVisible[] = []
+
+  for (const sat of geoSatellites) {
+    try {
+      const satrec = satellite.twoline2satrec(sat.tle.line1, sat.tle.line2)
+      if (!satrec) continue
+
+      const result = satellite.propagate(satrec, atTime)
+
+      if (
+        result &&
+        typeof result.position !== 'boolean' &&
+        result.position
+      ) {
+        const gmst = satellite.gstime(atTime)
+        const positionEci = result.position
+        const positionEcf = satellite.eciToEcf(positionEci, gmst)
+        const lookAngles = satellite.ecfToLookAngles(observerGd, positionEcf)
+
+        const elevationDeg = satellite.radiansToDegrees(lookAngles.elevation)
+        const azimuthDeg = satellite.radiansToDegrees(lookAngles.azimuth)
+
+        // Only include if above horizon
+        if (elevationDeg > 0) {
+          visible.push({
+            noradId: sat.noradId,
+            name: sat.name,
+            orbitType: 'GEO',
+            elevationDeg,
+            azimuthDeg,
+          })
+        }
+      }
+    } catch {
+      continue
+    }
+  }
+
+  // Sort by elevation (highest first)
+  visible.sort((a, b) => b.elevationDeg - a.elevationDeg)
+
+  return visible
 }

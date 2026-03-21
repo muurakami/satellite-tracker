@@ -3,6 +3,17 @@ import type { Locale } from '@/lib/i18n'
 
 export type MapTheme = 'dark' | 'light' | 'satellite' | 'terrain'
 
+export interface ObservationPoint {
+  id: string // crypto.randomUUID()
+  lat: number
+  lon: number
+  label: string // "Point 1", "Point 2", etc.
+  color: string // "#ff4466", "#ffaa00", "#00ff88", "#aa88ff", "#4488ff"
+  active: boolean // which point PassList is tracking
+}
+
+const POINT_COLORS = ['#ff4466', '#ffaa00', '#00ff88', '#aa88ff', '#4488ff']
+
 export const MAP_THEMES: Record<MapTheme, { label: string; tiles: string[] }> = {
   dark: {
     label: 'Dark',
@@ -57,10 +68,19 @@ interface MapStore {
   showClusters: boolean
   showGrid: boolean
   showTerminator: boolean
+  // Observation points
+  observationPoints: ObservationPoint[]
+  activePointId: string | null
+  isAddingPoint: boolean
   // i18n
   locale: Locale
   // Actions
   setSelectedPoint: (p: { lat: number; lon: number } | null) => void
+  addObservationPoint: (lat: number, lon: number) => void
+  removeObservationPoint: (id: string) => void
+  updateObservationPoint: (id: string, lat: number, lon: number) => void
+  setActivePoint: (id: string) => void
+  toggleAddingPoint: () => void
   toggleGroundTrack: () => void
   toggleCoverage: () => void
   setMapTheme: (theme: MapTheme) => void
@@ -83,7 +103,7 @@ interface MapStore {
   setLocale: (locale: Locale) => void
 }
 
-export const useMapStore = create<MapStore>((set) => ({
+export const useMapStore = create<MapStore>((set, get) => ({
   selectedPoint: null,
   showGroundTrack: false,
   showCoverage: false,
@@ -100,17 +120,135 @@ export const useMapStore = create<MapStore>((set) => ({
   showGrid: false,
   showTerminator: false,
   locale: 'ru' as Locale,
+  // Observation points
+  observationPoints: [],
+  activePointId: null,
+  isAddingPoint: false,
+
+  addObservationPoint: (lat, lon) => {
+    const points = get().observationPoints
+    if (points.length >= 5) return // Max 5 points
+
+    // Normalize longitude
+    let normalizedLon = lon
+    while (normalizedLon > 180) normalizedLon -= 360
+    while (normalizedLon < -180) normalizedLon += 360
+
+    const nextNum = points.length + 1
+    const color = POINT_COLORS[(nextNum - 1) % POINT_COLORS.length]
+    const newPoint: ObservationPoint = {
+      id: crypto.randomUUID(),
+      lat,
+      lon: normalizedLon,
+      label: `Point ${nextNum}`,
+      color,
+      active: true,
+    }
+
+    // Deactivate other points
+    const updated = points.map(p => ({ ...p, active: false }))
+    set({
+      observationPoints: [...updated, newPoint],
+      activePointId: newPoint.id,
+      selectedPoint: { lat, lon: normalizedLon },
+      isAddingPoint: false,
+    })
+  },
+
+  removeObservationPoint: (id) => {
+    const { observationPoints, activePointId } = get()
+    const filtered = observationPoints.filter(p => p.id !== id)
+    
+    let newActiveId = activePointId
+    let newSelectedPoint: { lat: number; lon: number } | null = null
+    
+    if (activePointId === id) {
+      // If we removed the active point, activate the first remaining
+      if (filtered.length > 0) {
+        filtered[0].active = true
+        newActiveId = filtered[0].id
+        newSelectedPoint = { lat: filtered[0].lat, lon: filtered[0].lon }
+      } else {
+        newActiveId = null
+        newSelectedPoint = null
+      }
+    } else if (filtered.length > 0) {
+      const active = filtered.find(p => p.id === activePointId)
+      if (active) {
+        newSelectedPoint = { lat: active.lat, lon: active.lon }
+      }
+    }
+    
+    set({
+      observationPoints: filtered,
+      activePointId: newActiveId,
+      selectedPoint: newSelectedPoint,
+    })
+  },
+
+  updateObservationPoint: (id, lat, lon) => {
+    const { observationPoints, activePointId } = get()
+    
+    let normalizedLon = lon
+    while (normalizedLon > 180) normalizedLon -= 360
+    while (normalizedLon < -180) normalizedLon += 360
+    
+    const updated = observationPoints.map(p =>
+      p.id === id ? { ...p, lat, lon: normalizedLon } : p
+    )
+    
+    let newSelectedPoint: { lat: number; lon: number } | null = null
+    if (activePointId === id) {
+      const active = updated.find(p => p.id === id)
+      if (active) {
+        newSelectedPoint = { lat: active.lat, lon: active.lon }
+      }
+    } else {
+      const active = updated.find(p => p.id === activePointId)
+      if (active) {
+        newSelectedPoint = { lat: active.lat, lon: active.lon }
+      }
+    }
+    
+    set({
+      observationPoints: updated,
+      selectedPoint: newSelectedPoint,
+    })
+  },
+
+  setActivePoint: (id) => {
+    const { observationPoints } = get()
+    const point = observationPoints.find(p => p.id === id)
+    if (!point) return
+    
+    const updated = observationPoints.map(p => ({
+      ...p,
+      active: p.id === id,
+    }))
+    
+    set({
+      observationPoints: updated,
+      activePointId: id,
+      selectedPoint: { lat: point.lat, lon: point.lon },
+    })
+  },
+
+  toggleAddingPoint: () => {
+    const { observationPoints, isAddingPoint } = get()
+    // Don't enable adding mode if already at max points
+    if (!isAddingPoint && observationPoints.length >= 5) {
+      return
+    }
+    set({ isAddingPoint: !isAddingPoint })
+  },
 
   setSelectedPoint: (p) => {
     if (!p) {
-      set({ selectedPoint: null })
+      set({ observationPoints: [], activePointId: null, selectedPoint: null })
       return
     }
-    // Normalize longitude to [-180, 180] range (MapLibre can return values outside this range)
-    let lon = p.lon
-    while (lon > 180) lon -= 360
-    while (lon < -180) lon += 360
-    set({ selectedPoint: { lat: p.lat, lon } })
+    // Backward compat: add as new observation point
+    get().addObservationPoint(p.lat, p.lon)
   },
 
   toggleGroundTrack: () =>
