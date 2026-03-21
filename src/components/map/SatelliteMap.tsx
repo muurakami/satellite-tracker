@@ -98,7 +98,7 @@ export default function SatelliteMap() {
       }
     }
 
-    getSatellites().then(setSatellites).catch(console.error)
+    getSatellites().then((sats) => { console.log('[SatelliteMap] Loaded satellites:', sats.length); setSatellites(sats) }).catch(console.error)
     wsClient.connect()
 
     return () => {

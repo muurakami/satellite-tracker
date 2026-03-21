@@ -75,6 +75,7 @@ export default function GroupComparisonTable() {
   const removeComparisonGroup = useSatelliteStore((s) => s.removeComparisonGroup)
   const clearComparisonGroups = useSatelliteStore((s) => s.clearComparisonGroups)
   const locale = useMapStore((s) => s.locale)
+  const isFilterPanelCollapsed = useMapStore((s) => s.isFilterPanelCollapsed)
 
   const stats = useComparisonGroupStats(comparisonGroups)
 
@@ -108,10 +109,12 @@ export default function GroupComparisonTable() {
   if (comparisonGroups.length < 2) return null
 
   return (
-    <div 
-      ref={panelRef} 
-      {...stopProps} 
-      className="fixed bottom-4 left-4 right-4 z-40 bg-zinc-900/95 backdrop-blur rounded-xl p-4 text-white shadow-xl border border-zinc-700"
+    <div
+      ref={panelRef}
+      {...stopProps}
+      className={`fixed bottom-4 right-4 z-35 bg-zinc-900/95 backdrop-blur rounded-xl p-4 text-white shadow-xl border border-zinc-700 transition-all duration-300 ${
+        isFilterPanelCollapsed ? 'left-16' : 'left-80'
+      }`}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">

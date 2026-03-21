@@ -24,6 +24,10 @@ const translations = {
   'groups.addToCompare': { ru: 'Добавить к сравнению', en: 'Add to compare' },
   'groups.removeFromCompare': { ru: 'Убрать из сравнения', en: 'Remove from compare' },
   'groups.moreToCompare': { ru: 'нужно ещё для сравнения', en: 'more to compare' },
+  'groups.activate': { ru: 'Показать группу', en: 'Show group' },
+  'groups.deactivate': { ru: 'Скрыть группу', en: 'Hide group' },
+  'groups.compareActive': { ru: 'Сравнение активно! Нажмите для просмотра', en: 'Comparison active! Click to view' },
+  'groups.selectToCompare': { ru: 'Выберите 2+ группы для сравнения', en: 'Select 2+ groups to compare' },
 
   // SatelliteCard
   'card.country': { ru: 'Страна', en: 'Country' },

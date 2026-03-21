@@ -18,10 +18,8 @@ import {
 } from './mock-data'
 import { fetchCelesTrakTLE } from './celestrak'
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'
-const USE_MOCK =
-  process.env.NEXT_PUBLIC_USE_MOCK === 'true' ||
-  BASE_URL.includes('localhost')
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8888'
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
 
 // Use CelesTrak for real TLE data when in mock mode
 const USE_CELESTRAK = process.env.NEXT_PUBLIC_USE_CELESTRAK !== 'false'
@@ -199,7 +197,9 @@ function normalizeSatellite(raw: RawSatellite): Satellite {
 // ===== API Functions =====
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, init)
+  // Direct request to backend - CORS is configured on backend v1.3
+  const fullPath = path.startsWith('/') ? path : `/${path}`
+  const res = await fetch(`${BASE_URL}/api${fullPath}`, init)
   if (!res.ok) {
     throw new Error(`API error ${res.status}: ${res.statusText}`)
   }
@@ -211,6 +211,7 @@ export async function getSatellites(filters?: {
   country?: string
   purpose?: SatellitePurpose
   q?: string
+  limit?: number
 }): Promise<Satellite[]> {
   if (USE_MOCK) {
     let sats: Satellite[]
@@ -236,10 +237,15 @@ export async function getSatellites(filters?: {
   if (filters?.country) params.set('country', filters.country)
   if (filters?.purpose) params.set('purpose', filters.purpose)
   if (filters?.q) params.set('q', filters.q)
+  // Add size parameter to get more satellites (default is 50 in backend)
+  if (!params.has('size')) {
+    params.set('size', filters?.limit?.toString() ?? '500')
+  }
   const qs = params.toString()
   
+  console.log('[API] Loading satellites from:', `${BASE_URL}/api/satellites${qs ? `?${qs}` : ''}`)
   // Backend returns paginated response: { content: Satellite[], totalElements, etc }
-  const response = await request<{ content?: RawSatellite[]; data?: RawSatellite[] }>(`/api/satellites${qs ? `?${qs}` : ''}`)
+  const response = await request<{ content?: RawSatellite[]; data?: RawSatellite[] }>(`/satellites${qs ? `?${qs}` : ''}`)
   const arr = response.content ?? response.data ?? []
   return arr.map(normalizeSatellite)
 }
@@ -250,8 +256,8 @@ export async function getSatelliteById(id: number): Promise<Satellite> {
     if (!sat) throw new Error(`Satellite ${id} not found`)
     return sat
   }
-  // Backend returns paginated response wrapped in content
-  const response = await request<RawSatellite>(`/api/satellites/${id}`)
+  // Backend uses /card endpoint
+  const response = await request<RawSatellite>(`/satellites/${id}/card`)
   return normalizeSatellite(response)
 }
 
@@ -261,17 +267,9 @@ export async function getSatelliteTLE(noradId: number): Promise<{ line1: string;
     if (!sat) throw new Error(`Satellite ${noradId} not found`)
     return sat.tle
   }
-  // Try to get TLE from backend
-  try {
-    const response = await request<{ tleLine1?: string; tleLine2?: string; tle?: { line1: string; line2: string } }>(
-      `/api/satellites/${noradId}/tle`
-    )
-    return response.tle ?? { line1: response.tleLine1 ?? '', line2: response.tleLine2 ?? '' }
-  } catch {
-    // If TLE endpoint doesn't exist, try to get from main endpoint
-    const sat = await request<RawSatellite>(`/api/satellites/${noradId}`)
-    return sat.tle ?? { line1: sat.tleLine1 ?? '', line2: sat.tleLine2 ?? '' }
-  }
+  // Get TLE from card endpoint (backend doesn't have separate /tle endpoint)
+  const sat = await request<RawSatellite>(`/satellites/${noradId}/card`)
+  return sat.tle ?? { line1: sat.tleLine1 ?? '', line2: sat.tleLine2 ?? '' }
 }
 
 export async function getSatellitePosition(
@@ -282,9 +280,9 @@ export async function getSatellitePosition(
     // Positions are computed on frontend via Web Worker
     throw new Error('Use Web Worker for mock position calculation')
   }
-  return request<SatellitePosition>(
-    `/api/satellites/${id}/position?t=${timestamp}`
-  )
+  // Backend: GET /api/satellites/{noradId}/position?time=ISO_STRING
+  const isoTime = new Date(timestamp).toISOString()
+  return request<SatellitePosition>(`/satellites/${id}/position?time=${isoTime}`)
 }
 
 export async function getGroundTrack(
@@ -294,9 +292,8 @@ export async function getGroundTrack(
   if (USE_MOCK) {
     return getMockGroundTrack(id)
   }
-  return request<FeatureCollection>(
-    `/api/satellites/${id}/groundtrack?orbits=${orbits}`
-  )
+  // Backend: GET /api/satellites/{noradId}/track
+  return request<FeatureCollection>(`/satellites/${id}/track`)
 }
 
 export async function getPassesForPoint(
@@ -307,16 +304,21 @@ export async function getPassesForPoint(
   if (USE_MOCK) {
     return getMockPassesForPoint(lat, lon)
   }
-  return request<SatellitePass[]>(
-    `/api/passes?lat=${lat}&lon=${lon}&hours=${hours}`
-  )
+  // Backend: GET /api/satellites/passes/batch?lat=&lon=&hoursAhead=
+  return request<SatellitePass[]>(`/satellites/passes/batch?lat=${lat}&lon=${lon}&hoursAhead=${hours}`)
 }
 
 export async function getStats(): Promise<StatsResponse> {
   if (USE_MOCK) {
     return getMockStats()
   }
-  return request<StatsResponse>('/api/stats')
+  // Backend doesn't have /stats endpoint - return empty stats
+  return {
+    totalSatellites: 0,
+    byOrbitType: { LEO: 0, MEO: 0, GEO: 0, HEO: 0 },
+    byCountry: [],
+    lastTleSync: new Date().toISOString(),
+  } as StatsResponse
 }
 
 export async function subscribe(
@@ -325,7 +327,7 @@ export async function subscribe(
   if (USE_MOCK) {
     return mockSubscribe(payload)
   }
-  return request<Subscription>('/api/subscriptions', {
+  return request<Subscription>('/subscriptions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -336,5 +338,5 @@ export async function unsubscribe(id: string): Promise<void> {
   if (USE_MOCK) {
     return mockUnsubscribe()
   }
-  await request<void>(`/api/subscriptions/${id}`, { method: 'DELETE' })
+  await request<void>(`/subscriptions/${id}`, { method: 'DELETE' })
 }

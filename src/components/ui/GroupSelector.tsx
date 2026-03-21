@@ -45,9 +45,10 @@ export default function GroupSelector({ onSelect }: GroupSelectorProps) {
   }, [searchText])
 
   const comparisonCount = comparisonGroups.length
+  const canShowTable = comparisonCount >= 2
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {/* Search input */}
       <input
         type="text"
@@ -57,26 +58,19 @@ export default function GroupSelector({ onSelect }: GroupSelectorProps) {
         className="w-full px-2 py-1 rounded bg-zinc-800 text-xs text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-zinc-600"
       />
 
-      {/* Header with reset and compare count */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <label className="text-xs text-zinc-400">{t('groups.title', locale)}</label>
-        <div className="flex items-center gap-2">
-          {comparisonCount > 0 && (
-            <span className="text-xs text-cyan-400">
-              ⚖️ {comparisonCount}
-            </span>
-          )}
-          <button
-            onClick={resetToDefaults}
-            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
-            {t('groups.reset', locale)}
-          </button>
-        </div>
+        <button
+          onClick={resetToDefaults}
+          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+        >
+          {t('groups.reset', locale)}
+        </button>
       </div>
       
-      {/* Group buttons with counts */}
-      <div className="flex flex-wrap gap-1.5">
+      {/* Group list - each group is a row with toggle and compare button */}
+      <div className="space-y-1">
         {filteredGroups.map((group) => {
           const config = GROUP_CONFIG[group]
           const isActive = activeGroups.includes(group)
@@ -84,41 +78,50 @@ export default function GroupSelector({ onSelect }: GroupSelectorProps) {
           const count = useGroupCount(group)
           
           return (
-            <div key={group} className="relative group/button">
+            <div 
+              key={group} 
+              className="flex items-center gap-2 p-1.5 rounded-md hover:bg-zinc-800/50 transition-colors"
+            >
+              {/* Active toggle checkbox */}
               <button
                 onClick={() => toggleGroup(group)}
                 className={`
-                  px-2 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1
+                  w-5 h-5 rounded flex items-center justify-center text-xs transition-all shrink-0
                   ${isActive 
-                    ? 'bg-zinc-700 text-white ring-1 ring-zinc-500' 
-                    : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'
+                    ? 'bg-zinc-600 text-white' 
+                    : 'bg-zinc-800 text-zinc-600 hover:text-zinc-400'
                   }
                 `}
-                title={config.description}
+                title={isActive ? t('groups.deactivate', locale) : t('groups.activate', locale)}
               >
-                <span>{config.icon}</span>
-                <span>{config.name}</span>
-                {count > 0 && (
-                  <span className={`ml-0.5 px-1 rounded text-[10px] ${
-                    isActive ? 'bg-zinc-600' : 'bg-zinc-700'
-                  }`}>
-                    {count}
-                  </span>
-                )}
+                {isActive && '✓'}
               </button>
-              
-              {/* Compare button - shows on hover */}
+
+              {/* Group info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">{config.icon}</span>
+                  <span className={`text-xs truncate ${isActive ? 'text-white' : 'text-zinc-400'}`}>
+                    {config.name}
+                  </span>
+                  {count > 0 && (
+                    <span className={`text-[10px] px-1 rounded shrink-0 ${
+                      isActive ? 'bg-zinc-600 text-zinc-300' : 'bg-zinc-800 text-zinc-500'
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Compare toggle button - always visible */}
               <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  toggleComparisonGroup(group)
-                }}
+                onClick={() => toggleComparisonGroup(group)}
                 className={`
-                  absolute -top-1 -right-1 w-4 h-4 rounded-full text-[8px] flex items-center justify-center
-                  transition-all opacity-0 group-hover/button:opacity-100
+                  px-2 py-1 rounded text-[10px] font-medium shrink-0 transition-all
                   ${isComparing 
-                    ? 'bg-cyan-600 text-white opacity-100' 
-                    : 'bg-zinc-600 text-zinc-300 hover:bg-cyan-600'
+                    ? 'bg-cyan-600 text-white' 
+                    : 'bg-zinc-800 text-zinc-500 hover:bg-cyan-700 hover:text-white'
                   }
                 `}
                 title={isComparing 
@@ -126,37 +129,40 @@ export default function GroupSelector({ onSelect }: GroupSelectorProps) {
                   : t('groups.addToCompare', locale)
                 }
               >
-                ⚖️
+                {isComparing ? '⚖️ ✓' : '⚖️'}
               </button>
             </div>
           )
         })}
       </div>
 
-      {/* Compare button - visible when groups are selected */}
-      {comparisonCount > 0 && (
-        <div className="pt-2 border-t border-zinc-700">
-          <button
-            onClick={() => {
-              // GroupComparisonTable will show automatically when comparisonCount >= 2
-            }}
-            className="w-full px-3 py-2.5 rounded-md text-sm font-semibold bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 text-white transition-all flex items-center justify-center gap-2 shadow-md"
-          >
-            <span className="text-base">⚖️</span>
-            <span>{t('groups.compare', locale)}</span>
-            {comparisonCount >= 2 && (
-              <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
-                {comparisonCount}
-              </span>
-            )}
-          </button>
-          {comparisonCount > 0 && comparisonCount < 2 && (
-            <p className="text-xs text-zinc-500 text-center mt-1">
-              {2 - comparisonCount} {t('groups.moreToCompare', locale)}
-            </p>
+      {/* Compare button at bottom */}
+      <div className="pt-2 border-t border-zinc-700">
+        <button
+          className={`
+            w-full px-3 py-2.5 rounded-md text-sm font-semibold transition-all flex items-center justify-center gap-2
+            ${canShowTable 
+              ? 'bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-lg animate-pulse' 
+              : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+            }
+          `}
+          disabled={!canShowTable}
+          title={canShowTable ? t('groups.compareActive', locale) : t('groups.selectToCompare', locale)}
+        >
+          <span className="text-base">⚖️</span>
+          <span>{t('groups.compare', locale)}</span>
+          {comparisonCount > 0 && (
+            <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
+              {comparisonCount}
+            </span>
           )}
-        </div>
-      )}
+        </button>
+        {comparisonCount > 0 && !canShowTable && (
+          <p className="text-xs text-zinc-500 text-center mt-1.5">
+            {2 - comparisonCount} {t('groups.moreToCompare', locale)}
+          </p>
+        )}
+      </div>
     </div>
   )
 }

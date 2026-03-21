@@ -3,7 +3,7 @@ import SockJS from 'sockjs-client'
 import type { SatellitePosition, PassNotification } from '@/types/satellite'
 import { useSatelliteStore } from '@/store/useSatelliteStore'
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? 'http://localhost:8080/ws'
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? 'http://localhost:8888/ws/satellites'
 const WS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_WS === 'true'
 
 type NotificationCallback = (n: PassNotification) => void

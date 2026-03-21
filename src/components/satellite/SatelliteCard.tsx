@@ -98,7 +98,7 @@ export default function SatelliteCard() {
         </div>
       </div>
 
-      {pos && (
+      {pos && pos.lat !== undefined && (
         <div className="mt-3 space-y-1 text-sm text-zinc-300 border-t border-zinc-700 pt-3">
           <p>
             <span className="text-zinc-500">{t('card.lat', locale)}:</span>{' '}

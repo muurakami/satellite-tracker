@@ -68,6 +68,7 @@ interface MapStore {
   showClusters: boolean
   showGrid: boolean
   showTerminator: boolean
+  isFilterPanelCollapsed: boolean
   showFullTrack: boolean
   // Observation points
   observationPoints: ObservationPoint[]
@@ -99,6 +100,7 @@ interface MapStore {
   toggleClusters: () => void
   setShowGrid: (value: boolean) => void
   toggleGrid: () => void
+  toggleFilterPanel: () => void
   setShowTerminator: (value: boolean) => void
   toggleTerminator: () => void
   setShowFullTrack: (value: boolean) => void
@@ -122,6 +124,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
   showClusters: true,
   showGrid: false,
   showTerminator: false,
+  isFilterPanelCollapsed: false,
   showFullTrack: false,
   locale: 'ru' as Locale,
   // Observation points
@@ -282,6 +285,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
   toggleClusters: () => set((state) => ({ showClusters: !state.showClusters })),
   setShowGrid: (value) => set({ showGrid: value }),
   toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
+  toggleFilterPanel: () => set((state) => ({ isFilterPanelCollapsed: !state.isFilterPanelCollapsed })),
   setShowTerminator: (value) => set({ showTerminator: value }),
   toggleTerminator: () => set((state) => ({ showTerminator: !state.showTerminator })),
   setShowFullTrack: (value) => set({ showFullTrack: value }),

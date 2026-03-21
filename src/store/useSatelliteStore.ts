@@ -77,8 +77,8 @@ export const useSatelliteStore = create<SatelliteStore>((set, get) => ({
   selectedSatellite: null,
   filters: {},
   activeGroups: DEFAULT_ACTIVE_GROUPS,
-  performanceMode: true,
-  performanceLimit: 10,
+  performanceMode: false, // Disabled by default to show all loaded satellites
+  performanceLimit: 500,
   isRefreshing: false,
   linkedSatellites: [],
   passAlerts: [],
