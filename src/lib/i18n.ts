@@ -51,6 +51,7 @@ const translations = {
   'settings.heatmap': { ru: 'Тепловая карта', en: 'Heatmap' },
   'settings.clusters': { ru: 'Кластеры', en: 'Clusters' },
   'settings.grid': { ru: 'Сетка координат', en: 'Coordinate Grid' },
+  'settings.terminator': { ru: 'Тень Земли', en: 'Day/Night' },
   'settings.language': { ru: 'Язык', en: 'Language' },
 
   // ZoomIndicator

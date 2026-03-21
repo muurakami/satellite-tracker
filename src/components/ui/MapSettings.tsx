@@ -26,6 +26,7 @@ export default function MapSettings() {
   const showHeatmap = useMapStore((s) => s.showHeatmap)
   const showClusters = useMapStore((s) => s.showClusters)
   const showGrid = useMapStore((s) => s.showGrid)
+  const showTerminator = useMapStore((s) => s.showTerminator)
   const locale = useMapStore((s) => s.locale)
   const setMapTheme = useMapStore((s) => s.setMapTheme)
   const setSelectedSatelliteColor = useMapStore((s) => s.setSelectedSatelliteColor)
@@ -34,6 +35,7 @@ export default function MapSettings() {
   const toggleHeatmap = useMapStore((s) => s.toggleHeatmap)
   const toggleClusters = useMapStore((s) => s.toggleClusters)
   const toggleGrid = useMapStore((s) => s.toggleGrid)
+  const toggleTerminator = useMapStore((s) => s.toggleTerminator)
   const setLocale = useMapStore((s) => s.setLocale)
 
   return (
@@ -188,9 +190,20 @@ export default function MapSettings() {
             >
               {showGrid ? `✅ ${t('settings.grid', locale)}` : `⭕ ${t('settings.grid', locale)}`}
             </button>
+
+            <button
+              onClick={toggleTerminator}
+              className={`w-full px-3 py-2 rounded text-sm text-left transition-colors ${
+                showTerminator
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+              }`}
+            >
+              {showTerminator ? `🌙 ${t('settings.terminator', locale)}` : `⭕ ${t('settings.terminator', locale)}`}
+            </button>
           </div>
         </div>
       )}
     </div>
   )
-}
+} 

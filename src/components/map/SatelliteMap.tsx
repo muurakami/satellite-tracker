@@ -17,6 +17,7 @@ import CoverageCone from './CoverageCone'
 import ClusterMarker from './ClusterMarker'
 import SatelliteLinks from './SatelliteLinks'
 import CoordinateGrid from './CoordinateGrid'
+import Terminator from './Terminator'
 
 const ORBIT_COLORS: Record<OrbitType, string> = {
   LEO: '#00ff88',
@@ -327,6 +328,9 @@ export default function SatelliteMap() {
       mapLib={maplibregl}
     >
       <NavigationControl position="top-right" />
+
+      {/* Terminator (day/night) - rendered first so satellites appear on top */}
+      <Terminator />
 
       {/* Coordinate grid overlay */}
       <CoordinateGrid />
