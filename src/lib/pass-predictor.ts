@@ -7,6 +7,14 @@ interface PassEvent {
   inPass: boolean
 }
 
+function isValidLatitude(lat: number): boolean {
+  return !isNaN(lat) && isFinite(lat) && lat >= -90 && lat <= 90
+}
+
+function isValidLongitude(lon: number): boolean {
+  return !isNaN(lon) && isFinite(lon) && lon >= -180 && lon <= 180
+}
+
 const MIN_ELEVATION_DEG = 2 // Lower threshold from 5° to 2°
 
 export function calculatePasses(
@@ -21,6 +29,12 @@ export function calculatePasses(
     .filter((s) => s.orbitType !== 'GEO')
     .slice(0, 200)
 
+  // Validate coordinates before processing
+  if (!isValidLatitude(lat) || !isValidLongitude(lon)) {
+    console.warn(`Invalid coordinates: lat=${lat}, lon=${lon}`)
+    return []
+  }
+  
   const observerGd = {
     longitude: satellite.degreesToRadians(lon),
     latitude: satellite.degreesToRadians(lat),
@@ -97,7 +111,7 @@ export function calculatePasses(
           // LOS - exiting pass
           inPass = false
 
-          if (aosTime && maxElevation >= MIN_ELEVATION_DEG) {
+          if (aosTime && maxElevation >= MIN_ELEVATION_DEG && !isNaN(maxElevation) && isFinite(maxElevation)) {
             passes.push({
               noradId: sat.noradId,
               name: sat.name,
@@ -114,7 +128,7 @@ export function calculatePasses(
       }
 
       // Handle pass that extends beyond end of window
-      if (inPass && aosTime && maxElevation >= MIN_ELEVATION_DEG) {
+      if (inPass && aosTime && maxElevation >= MIN_ELEVATION_DEG && !isNaN(maxElevation) && isFinite(maxElevation)) {
         passes.push({
           noradId: sat.noradId,
           name: sat.name,
@@ -143,6 +157,12 @@ export function calculateGeoVisible(
   lon: number,
   atTime: Date = new Date()
 ): GeoSatelliteVisible[] {
+  // Validate coordinates before processing
+  if (!isValidLatitude(lat) || !isValidLongitude(lon)) {
+    console.warn(`Invalid coordinates: lat=${lat}, lon=${lon}`)
+    return []
+  }
+  
   // Filter to GEO only
   const geoSatellites = satellites.filter((s) => s.orbitType === 'GEO')
 
@@ -174,8 +194,9 @@ export function calculateGeoVisible(
         const elevationDeg = satellite.radiansToDegrees(lookAngles.elevation)
         const azimuthDeg = satellite.radiansToDegrees(lookAngles.azimuth)
 
-        // Only include if above horizon
-        if (elevationDeg > 0) {
+        // Only include if above horizon and values are valid
+        if (elevationDeg > 0 && !isNaN(elevationDeg) && isFinite(elevationDeg) &&
+            !isNaN(azimuthDeg) && isFinite(azimuthDeg)) {
           visible.push({
             noradId: sat.noradId,
             name: sat.name,

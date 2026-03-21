@@ -11,13 +11,25 @@ import { t } from '@/lib/i18n'
 import type { SatellitePass, GeoSatelliteVisible } from '@/types/satellite'
 
 function formatCoord(lat: number, lon: number): string {
+  // Check if coordinates are valid numbers
+  if (isNaN(lat) || isNaN(lon)) {
+    return 'Invalid coordinates'
+  }
+  
   const latDir = lat >= 0 ? 'N' : 'S'
   const lonDir = lon >= 0 ? 'E' : 'W'
   return `${Math.abs(lat).toFixed(1)}°${latDir} ${Math.abs(lon).toFixed(1)}°${lonDir}`
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], {
+  const date = new Date(iso)
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return 'Invalid date'
+  }
+  
+  return date.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
     timeZone: 'UTC',
@@ -27,6 +39,12 @@ function formatTime(iso: string): string {
 function formatDuration(aosIso: string, losIso: string): string {
   const aos = new Date(aosIso).getTime()
   const los = new Date(losIso).getTime()
+  
+  // Check if dates are valid
+  if (isNaN(aos) || isNaN(los)) {
+    return 'Invalid duration'
+  }
+  
   const minutes = Math.round((los - aos) / 60000)
   return `${minutes} min`
 }
@@ -143,15 +161,19 @@ export default function PassList() {
           </h3>
           <div className="flex items-center gap-1.5 mt-0.5">
             <p className="text-xs text-zinc-400">
-              {formatCoord(selectedPoint.lat, selectedPoint.lon)}
+              {selectedPoint && !isNaN(selectedPoint.lat) && !isNaN(selectedPoint.lon)
+                ? formatCoord(selectedPoint.lat, selectedPoint.lon)
+                : 'Invalid coordinates'}
             </p>
             <button
               onClick={() => {
-                navigator.clipboard.writeText(
-                  `${selectedPoint.lat.toFixed(6)}, ${selectedPoint.lon.toFixed(6)}`
-                )
-                setCopied(true)
-                setTimeout(() => setCopied(false), 2000)
+                if (selectedPoint && !isNaN(selectedPoint.lat) && !isNaN(selectedPoint.lon)) {
+                  navigator.clipboard.writeText(
+                    `${selectedPoint.lat.toFixed(6)}, ${selectedPoint.lon.toFixed(6)}`
+                  )
+                  setCopied(true)
+                  setTimeout(() => setCopied(false), 2000)
+                }
               }}
               className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white/50 hover:text-white text-[10px] transition-all min-w-[60px] justify-center"
               title={t('points.copy_coords', locale)}
@@ -222,9 +244,11 @@ export default function PassList() {
 
                   <div className="flex items-center gap-3 mt-1 text-xs text-zinc-400">
                     <span>{formatDuration(pass.aos, pass.los)}</span>
-                    <span className="text-emerald-400 font-medium">
-                      ↑ {pass.maxElevationDeg.toFixed(1)}°
-                    </span>
+                    {pass.maxElevationDeg != null && !isNaN(pass.maxElevationDeg) && (
+                      <span className="text-emerald-400 font-medium">
+                        ↑ {pass.maxElevationDeg.toFixed(1)}°
+                      </span>
+                    )}
                   </div>
                 </button>
               )
@@ -259,7 +283,7 @@ export default function PassList() {
                       {geo.name}
                     </span>
                     <span className="text-xs text-white/60 ml-2">
-                      ↑ {geo.elevationDeg.toFixed(1)}°
+                      ↑ {geo.elevationDeg != null && !isNaN(geo.elevationDeg) ? geo.elevationDeg.toFixed(1) : '0.0'}°
                     </span>
                   </button>
                 )

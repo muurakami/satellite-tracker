@@ -53,6 +53,7 @@ interface SatelliteStore {
   removeGroup: (group: SatelliteGroup) => void
   resetToDefaults: () => void
   setPerformanceMode: (value: boolean) => void
+  setPerformanceLimit: (limit: number) => void
   togglePerformanceMode: () => void
   refreshSatellites: () => Promise<void>
   toggleSatelliteLink: (noradId: number) => void
@@ -125,6 +126,7 @@ export const useSatelliteStore = create<SatelliteStore>((set, get) => ({
   resetToDefaults: () => set({ activeGroups: DEFAULT_ACTIVE_GROUPS }),
 
   setPerformanceMode: (value) => set({ performanceMode: value }),
+  setPerformanceLimit: (limit: number) => set({ performanceLimit: Math.max(10, Math.min(5000, limit)), performanceMode: true }),
 
   togglePerformanceMode: () =>
     set((state) => ({ performanceMode: !state.performanceMode })),

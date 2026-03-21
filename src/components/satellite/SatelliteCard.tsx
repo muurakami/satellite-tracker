@@ -77,19 +77,19 @@ export default function SatelliteCard() {
         <div className="grid grid-cols-2 gap-2">
           <div>
             <span className="text-zinc-500 text-xs">{t('card.period', locale)}:</span>{' '}
-            <span>{selectedSatellite.periodMin.toFixed(1)} min</span>
+            <span>{!isNaN(selectedSatellite.periodMin) ? selectedSatellite.periodMin.toFixed(1) : 'N/A'} min</span>
           </div>
           <div>
             <span className="text-zinc-500 text-xs">{t('card.altitude', locale)}:</span>{' '}
-            <span>{selectedSatellite.altitudeKm.toFixed(0)} km</span>
+            <span>{!isNaN(selectedSatellite.altitudeKm) ? selectedSatellite.altitudeKm.toFixed(0) : 'N/A'} km</span>
           </div>
-          {selectedSatellite.inclinationDeg !== undefined && (
+          {selectedSatellite.inclinationDeg != null && !isNaN(selectedSatellite.inclinationDeg) && (
             <div>
               <span className="text-zinc-500 text-xs">{t('card.inclination', locale)}:</span>{' '}
               <span>{selectedSatellite.inclinationDeg.toFixed(1)}°</span>
             </div>
           )}
-          {selectedSatellite.raan !== undefined && (
+          {selectedSatellite.raan != null && !isNaN(selectedSatellite.raan) && (
             <div>
               <span className="text-zinc-500 text-xs">{t('card.raan', locale)}:</span>{' '}
               <span>{selectedSatellite.raan.toFixed(1)}°</span>
@@ -98,7 +98,7 @@ export default function SatelliteCard() {
         </div>
       </div>
 
-      {pos && pos.lat !== undefined && (
+      {pos && pos.lat != null && !isNaN(pos.lat) && (
         <div className="mt-3 space-y-1 text-sm text-zinc-300 border-t border-zinc-700 pt-3">
           <p>
             <span className="text-zinc-500">{t('card.lat', locale)}:</span>{' '}
@@ -106,15 +106,15 @@ export default function SatelliteCard() {
           </p>
           <p>
             <span className="text-zinc-500">{t('card.lon', locale)}:</span>{' '}
-            {pos.lon.toFixed(4)}°
+            {pos.lon != null && !isNaN(pos.lon) ? pos.lon.toFixed(4) : 'N/A'}°
           </p>
           <p>
             <span className="text-zinc-500">{t('card.alt', locale)}:</span>{' '}
-            {pos.alt.toFixed(1)} km
+            {pos.alt != null && !isNaN(pos.alt) ? pos.alt.toFixed(1) : 'N/A'} km
           </p>
           <p>
             <span className="text-zinc-500">{t('card.velocity', locale)}:</span>{' '}
-            {pos.velocityKmS.toFixed(2)} km/s
+            {pos.velocityKmS != null && !isNaN(pos.velocityKmS) ? pos.velocityKmS.toFixed(2) : 'N/A'} km/s
           </p>
         </div>
       )}

@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useSatelliteStore } from '@/store/useSatelliteStore'
 import { useMapStore } from '@/store/useMapStore'
-import { useGroupCount } from '@/hooks/useGroupStats'
+import { useAllGroupStats } from '@/hooks/useGroupStats'
 import { GROUP_CONFIG, type SatelliteGroup, ALL_GROUPS } from '@/types/satellite'
 import { t } from '@/lib/i18n'
 
@@ -21,6 +21,14 @@ export default function GroupSelector({ onSelect }: GroupSelectorProps) {
   const locale = useMapStore((s) => s.locale)
   
   const [searchText, setSearchText] = useState('')
+  const allGroupStats = useAllGroupStats()
+  const statsByGroup = useMemo(() => {
+    const map = new Map<SatelliteGroup, number>()
+    for (const stats of allGroupStats) {
+      map.set(stats.groupId, stats.totalCount)
+    }
+    return map
+  }, [allGroupStats])
 
   const toggleGroup = (group: SatelliteGroup) => {
     if (activeGroups.includes(group)) {
@@ -75,7 +83,7 @@ export default function GroupSelector({ onSelect }: GroupSelectorProps) {
           const config = GROUP_CONFIG[group]
           const isActive = activeGroups.includes(group)
           const isComparing = comparisonGroups.includes(group)
-          const count = useGroupCount(group)
+          const count = statsByGroup.get(group) ?? 0
           
           return (
             <div 

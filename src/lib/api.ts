@@ -159,15 +159,21 @@ function normalizeSatellite(raw: RawSatellite): Satellite {
 
   // Resolve altitude - backend sends apogeeKm and perigeeKm, frontend expects altitudeKm
   // Use average of apogee and perigee as altitude
-  const altitudeKm = (raw.apogeeKm ?? 0) + (raw.perigeeKm ?? 0) > 0 
-    ? ((raw.apogeeKm ?? 0) + (raw.perigeeKm ?? 0)) / 2
-    : raw.altitudeKm ?? 0
+  const apogeeKm = (raw.apogeeKm != null && !isNaN(raw.apogeeKm) && isFinite(raw.apogeeKm)) ? raw.apogeeKm : 0
+  const perigeeKm = (raw.perigeeKm != null && !isNaN(raw.perigeeKm) && isFinite(raw.perigeeKm)) ? raw.perigeeKm : 0
+  const altitudeKm = (apogeeKm + perigeeKm) > 0
+    ? (apogeeKm + perigeeKm) / 2
+    : (raw.altitudeKm != null && !isNaN(raw.altitudeKm) && isFinite(raw.altitudeKm)) ? raw.altitudeKm : 0
 
   // Resolve period - backend sends 'periodMinutes', frontend expects 'periodMin'
-  const periodMin = raw.periodMin ?? raw.periodMinutes ?? 0
-
+  const periodMin = (raw.periodMin != null && !isNaN(raw.periodMin) && isFinite(raw.periodMin)) ? raw.periodMin
+    : (raw.periodMinutes != null && !isNaN(raw.periodMinutes) && isFinite(raw.periodMinutes)) ? raw.periodMinutes
+    : 0
+  
   // Resolve inclination - backend sends 'inclination', frontend expects 'inclinationDeg'
-  const inclinationDeg = raw.inclinationDeg ?? raw.inclination ?? undefined
+  const inclinationDeg = (raw.inclinationDeg != null && !isNaN(raw.inclinationDeg) && isFinite(raw.inclinationDeg)) ? raw.inclinationDeg
+    : (raw.inclination != null && !isNaN(raw.inclination) && isFinite(raw.inclination)) ? raw.inclination
+    : undefined
 
   // Resolve TLE - backend doesn't send TLE in list response, need separate endpoint
   // For now, create empty TLE - will be loaded separately if needed
@@ -196,6 +202,46 @@ function normalizeSatellite(raw: RawSatellite): Satellite {
 
 // ===== API Functions =====
 
+// Helper function to normalize potentially problematic values from backend
+function normalizeBackendResponse<T>(data: T): T {
+  if (typeof data !== 'object' || data === null) {
+    return data
+  }
+  
+  // Create a deep clone to avoid mutating the original data
+  // Use structuredClone if available, otherwise fallback to JSON methods
+  let cloned: any
+  try {
+    cloned = structuredClone(data)
+  } catch {
+    // Fallback for environments that don't support structuredClone
+    cloned = JSON.parse(JSON.stringify(data))
+  }
+  
+  // Recursively normalize all numeric values to handle NaN/Infinity
+  function normalize(obj: any) {
+    if (obj === null || typeof obj !== 'object') return obj
+    
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        const value = obj[key]
+        
+        if (typeof value === 'number') {
+          if (isNaN(value) || !isFinite(value)) {
+            obj[key] = undefined
+          }
+        } else if (typeof value === 'object' && value !== null) {
+          normalize(value)
+        }
+      }
+    }
+    
+    return obj
+  }
+  
+  return normalize(cloned)
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // Direct request to backend - CORS is configured on backend v1.3
   const fullPath = path.startsWith('/') ? path : `/${path}`
@@ -203,7 +249,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     throw new Error(`API error ${res.status}: ${res.statusText}`)
   }
-  return res.json() as Promise<T>
+  const data = await res.json()
+  return normalizeBackendResponse(data) as T
 }
 
 export async function getSatellites(filters?: {
@@ -282,7 +329,17 @@ export async function getSatellitePosition(
   }
   // Backend: GET /api/satellites/{noradId}/position?time=ISO_STRING
   const isoTime = new Date(timestamp).toISOString()
-  return request<SatellitePosition>(`/satellites/${id}/position?time=${isoTime}`)
+  const response = await request<any>(`/satellites/${id}/position?time=${isoTime}`)
+  
+  // Normalize position data to handle potential NaN values
+  return {
+    noradId: response.noradId,
+    lat: (response.lat != null && !isNaN(response.lat) && isFinite(response.lat)) ? response.lat : 0,
+    lon: (response.lon != null && !isNaN(response.lon) && isFinite(response.lon)) ? response.lon : 0,
+    alt: (response.alt != null && !isNaN(response.alt) && isFinite(response.alt)) ? response.alt : 0,
+    velocityKmS: (response.velocityKmS != null && !isNaN(response.velocityKmS) && isFinite(response.velocityKmS)) ? response.velocityKmS : 0,
+    ts: (response.ts != null && !isNaN(response.ts) && isFinite(response.ts)) ? response.ts : Date.now()
+  }
 }
 
 export async function getGroundTrack(

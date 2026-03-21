@@ -9,6 +9,7 @@ import { fetchCelesTrakTLEFromText } from '@/lib/celestrak'
 import GroupSelector from './GroupSelector'
 import AddPointButton from './AddPointButton'
 import LocationPresets from './LocationPresets'
+import SatelliteLimitSlider from './SatelliteLimitSlider'
 
 const ORBIT_OPTIONS: (OrbitType | '')[] = ['', 'LEO', 'MEO', 'GEO', 'HEO']
 const PURPOSE_OPTIONS: (SatellitePurpose | '')[] = [
@@ -413,6 +414,9 @@ export default function FilterPanel() {
 
           {/* Group selector */}
           <GroupSelector />
+
+          {/* Satellite Limit Slider */}
+          <SatelliteLimitSlider />
 
           {/* Search */}
           <div className="border-t border-zinc-800 pt-3">

@@ -116,8 +116,8 @@ export interface SatellitePass {
   name: string
   orbitType: OrbitType
   aos: string // ISO-8601
-  los: string // ISO-8601
-  maxElevationDeg: number
+  los: string // ISO-860-1
+  maxElevationDeg?: number // Optional - can be undefined if calculation fails
 }
 
 export interface GeoSatelliteVisible {
