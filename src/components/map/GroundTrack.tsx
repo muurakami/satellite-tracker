@@ -6,6 +6,7 @@ import * as satellite from 'satellite.js'
 import { useSatelliteStore } from '@/store/useSatelliteStore'
 import { useMapStore } from '@/store/useMapStore'
 import { useSimulationStore } from '@/store/useSimulationStore'
+import { unwrapLongitudes, splitIntoOrbits } from '@/lib/unwrapCoordinates'
 import type { FeatureCollection, LineString } from 'geojson'
 import type { OrbitType } from '@/types/satellite'
 
@@ -16,169 +17,187 @@ const ORBIT_COLORS: Record<OrbitType, string> = {
   HEO: '#aa88ff',
 }
 
-// Split points into segments where antimeridian is crossed
-function splitAtAntimeridian(points: [number, number][]): [number, number][][] {
-  if (points.length < 2) return [points]
+interface TrackPoint {
+  lon: number
+  lat: number
+  ts: number
+}
 
-  const segments: [number, number][][] = []
-  let currentSegment: [number, number][] = []
-
-  for (let i = 0; i < points.length; i++) {
-    const point = points[i]
-    currentSegment.push(point)
-
-    if (i < points.length - 1) {
-      const nextPoint = points[i + 1]
-      const lonDelta = Math.abs(nextPoint[0] - point[0])
-
-      // Crossed antimeridian if longitude delta > 180
-      if (lonDelta > 180) {
-        segments.push(currentSegment)
-        currentSegment = []
-      }
-    }
+// Convert segments to GeoJSON FeatureCollection
+function toFeatureCollection(segs: [number, number][][]): FeatureCollection<LineString> {
+  return {
+    type: 'FeatureCollection',
+    features: segs
+      .filter((s) => s.length >= 2)
+      .map((s) => ({
+        type: 'Feature' as const,
+        geometry: {
+          type: 'LineString' as const,
+          coordinates: s,
+        },
+        properties: {},
+      })),
   }
-
-  if (currentSegment.length > 0) {
-    segments.push(currentSegment)
-  }
-
-  return segments
 }
 
 export default function GroundTrack() {
   const selectedSatellite = useSatelliteStore((s) => s.selectedSatellite)
   const showGroundTrack = useMapStore((s) => s.showGroundTrack)
+  const showFullTrack = useMapStore((s) => s.showFullTrack)
   const simulationTime = useSimulationStore((s) => s.simulationTime)
 
   const { pastTracks, futureTracks, orbitColor } = useMemo(() => {
-    if (!selectedSatellite || !simulationTime) {
-      return { pastTracks: null, futureTracks: null, orbitColor: '#00ff88' }
+    const empty = { type: 'FeatureCollection' as const, features: [] }
+
+    if (!selectedSatellite?.tle?.line1 || !showGroundTrack) {
+      return { pastTracks: empty, futureTracks: empty, orbitColor: '#00ff88' }
     }
 
-    const { tle, periodMin, orbitType } = selectedSatellite
+    const { tle, periodMin = 90, altitudeKm = 500, orbitType = 'LEO' } = selectedSatellite
     const orbitColor = ORBIT_COLORS[orbitType]
 
+    // Period in milliseconds (defensive)
+    const periodMs = periodMin * 60 * 1000
+    // Higher resolution for LEO (faster), lower for higher orbits
+    const stepMs = altitudeKm < 600 ? 15_000 : 30_000
+
+    // Points per orbit: ~90 min orbit / 15s step = ~360 points, or ~180 for 30s step
+    const pointsPerOrbit = altitudeKm < 600 ? 360 : 180
+
+    const simTs = simulationTime instanceof Date
+      ? simulationTime.getTime()
+      : Date.now()
+
+    // Number of orbits to show
+    const pastOrbits = showFullTrack ? 5 : 1
+    const futureOrbits = showFullTrack ? 5 : 2
+
+    // Time range based on showFullTrack
+    const startTime = simTs - periodMs * pastOrbits
+    const endTime = simTs + periodMs * futureOrbits
+
     // Create satellite record from TLE
-    const satrec = satellite.twoline2satrec(tle.line1, tle.line2)
+    let satrec: satellite.SatRec
+    try {
+      satrec = satellite.twoline2satrec(tle.line1, tle.line2)
+    } catch {
+      return { pastTracks: empty, futureTracks: empty, orbitColor }
+    }
 
-    const periodSeconds = periodMin * 60
-    const startTime = new Date(simulationTime.getTime() - periodSeconds * 1000) // 1 orbit behind
-    const endTime = new Date(simulationTime.getTime() + 2 * periodSeconds * 1000) // 2 orbits ahead
-    const stepMs = 30 * 1000 // 30 seconds
+    // Generate all points with continuous longitudes
+    const allPoints: TrackPoint[] = []
+    let cumulativeLon = 0 // Track cumulative longitude to avoid jumps
 
-    const allPoints: { point: [number, number]; time: Date; isPast: boolean }[] = []
+    for (let ts = startTime; ts <= endTime; ts += stepMs) {
+      try {
+        const pv = satellite.propagate(satrec, new Date(ts))
+        if (!pv || !pv.position || typeof pv.position === 'boolean') continue
 
-    // Propagate positions
-    let currentTime = new Date(startTime.getTime())
-    while (currentTime.getTime() <= endTime.getTime()) {
-      const result = satellite.propagate(satrec, currentTime)
-      if (!result) {
-        currentTime = new Date(currentTime.getTime() + stepMs)
+        const gmst = satellite.gstime(new Date(ts))
+        const geo = satellite.eciToGeodetic(
+          pv.position as satellite.EciVec3<number>,
+          gmst
+        )
+        const rawLon = satellite.degreesLong(geo.longitude)
+        const lat = satellite.degreesLat(geo.latitude)
+
+        if (!isFinite(rawLon) || !isFinite(lat)) continue
+
+        // Normalize lon to be continuous (unwrap)
+        const normalizedLon = rawLon + cumulativeLon * 360
+
+        // Track when we cross the antimeridian to adjust cumulative offset
+        if (allPoints.length > 0) {
+          const prevRawLon = allPoints[allPoints.length - 1].lon - cumulativeLon * 360
+          const diff = rawLon - prevRawLon
+
+          // If diff > 180, we crossed westward (e.g., 179 → -179)
+          // If diff < -180, we crossed eastward (e.g., -179 → 179)
+          if (diff > 180) {
+            cumulativeLon -= 1
+          } else if (diff < -180) {
+            cumulativeLon += 1
+          }
+        }
+
+        const unwrappedLon = rawLon + cumulativeLon * 360
+
+        allPoints.push({ lon: unwrappedLon, lat, ts })
+      } catch {
         continue
       }
-      const position = result.position
-      if (position) {
-        const gmst = satellite.gstime(currentTime)
-        const geodetic = satellite.eciToGeodetic(position, gmst)
-        const lon = satellite.degreesLong(geodetic.longitude)
-        const lat = satellite.degreesLat(geodetic.latitude)
-
-        const isPast = currentTime.getTime() < simulationTime.getTime()
-
-        allPoints.push({
-          point: [lon, lat],
-          time: new Date(currentTime.getTime()),
-          isPast,
-        })
-      }
-
-      currentTime = new Date(currentTime.getTime() + stepMs)
     }
 
-    if (allPoints.length === 0) {
-      return { pastTracks: null, futureTracks: null, orbitColor }
+    if (allPoints.length < 2) {
+      return { pastTracks: empty, futureTracks: empty, orbitColor }
     }
 
-    // Find index closest to simulationTime
-    let closestIndex = 0
-    let closestDiff = Infinity
-    for (let i = 0; i < allPoints.length; i++) {
-      const diff = Math.abs(allPoints[i].time.getTime() - simulationTime.getTime())
-      if (diff < closestDiff) {
-        closestDiff = diff
-        closestIndex = i
-      }
+    // Split past / future
+    const pastPoints = allPoints.filter((p) => p.ts <= simTs)
+    const futurePoints = allPoints.filter((p) => p.ts >= simTs)
+
+    // Convert to coordinate arrays
+    const pastCoords = pastPoints.map((p) => [p.lon, p.lat] as [number, number])
+    const futureCoords = futurePoints.map((p) => [p.lon, p.lat] as [number, number])
+
+    // For full track, split into orbits to avoid connecting end of one orbit to start of next
+    let pastFC: FeatureCollection<LineString>
+    let futureFC: FeatureCollection<LineString>
+
+    if (showFullTrack) {
+      // Split into orbits for full track mode
+      const pastOrbitSegments = splitIntoOrbits(pastCoords, pointsPerOrbit)
+      const futureOrbitSegments = splitIntoOrbits(futureCoords, pointsPerOrbit)
+
+      pastFC = toFeatureCollection(pastOrbitSegments)
+      futureFC = toFeatureCollection(futureOrbitSegments)
+    } else {
+      // For short track, just unwrap and use as single feature
+      pastFC = toFeatureCollection([unwrapLongitudes(pastCoords)])
+      futureFC = toFeatureCollection([unwrapLongitudes(futureCoords)])
     }
 
-    // Split into past and future
-    const pastPoints = allPoints.slice(0, closestIndex + 1).map((p) => p.point)
-    const futurePoints = allPoints.slice(closestIndex).map((p) => p.point)
+    return { pastTracks: pastFC, futureTracks: futureFC, orbitColor }
+  }, [selectedSatellite, simulationTime, showGroundTrack, showFullTrack])
 
-    // Split each at antimeridian
-    const pastSegments = splitAtAntimeridian(pastPoints)
-    const futureSegments = splitAtAntimeridian(futurePoints)
-
-    // Build FeatureCollections
-    const pastFeatures: GeoJSON.Feature<LineString>[] = pastSegments.map((segment) => ({
-      type: 'Feature' as const,
-      geometry: {
-        type: 'LineString' as const,
-        coordinates: segment,
-      },
-      properties: {},
-    }))
-
-    const futureFeatures: GeoJSON.Feature<LineString>[] = futureSegments.map((segment) => ({
-      type: 'Feature' as const,
-      geometry: {
-        type: 'LineString' as const,
-        coordinates: segment,
-      },
-      properties: {},
-    }))
-
-    const pastTracks: FeatureCollection<LineString> = {
-      type: 'FeatureCollection',
-      features: pastFeatures,
-    }
-
-    const futureTracks: FeatureCollection<LineString> = {
-      type: 'FeatureCollection',
-      features: futureFeatures,
-    }
-
-    return { pastTracks, futureTracks, orbitColor }
-  }, [selectedSatellite, simulationTime])
-
-  if (!showGroundTrack || !selectedSatellite) return null
+  if (!showGroundTrack || !selectedSatellite) {
+    return null
+  }
 
   return (
     <>
-      {/* Past track - dashed line */}
-      <Source id="groundtrack-past-source" type="geojson" data={pastTracks ?? { type: 'FeatureCollection', features: [] }}>
+      {/* Past track - dashed, dimmer */}
+      <Source
+        id="groundtrack-past-source"
+        type="geojson"
+        data={pastTracks ?? { type: 'FeatureCollection', features: [] }}
+      >
         <Layer
           id="groundtrack-past-layer"
           type="line"
           source="groundtrack-past-source"
           paint={{
             'line-color': orbitColor,
-            'line-opacity': 0.4,
             'line-width': 1.5,
+            'line-opacity': 0.35,
             'line-dasharray': [2, 2],
           }}
         />
       </Source>
-      {/* Future track - solid line */}
-      <Source id="groundtrack-future-source" type="geojson" data={futureTracks ?? { type: 'FeatureCollection', features: [] }}>
+      {/* Future track - solid, brighter */}
+      <Source
+        id="groundtrack-future-source"
+        type="geojson"
+        data={futureTracks ?? { type: 'FeatureCollection', features: [] }}
+      >
         <Layer
           id="groundtrack-future-layer"
           type="line"
           source="groundtrack-future-source"
           paint={{
             'line-color': orbitColor,
-            'line-opacity': 0.9,
             'line-width': 2,
+            'line-opacity': 0.85,
           }}
         />
       </Source>

@@ -19,6 +19,11 @@ const translations = {
   // GroupSelector
   'groups.title': { ru: 'Группы спутников', en: 'Satellite Groups' },
   'groups.reset': { ru: 'Сброс', en: 'Reset' },
+  'groups.search': { ru: 'Поиск групп...', en: 'Search groups...' },
+  'groups.compare': { ru: 'Сравнить', en: 'Compare' },
+  'groups.addToCompare': { ru: 'Добавить к сравнению', en: 'Add to compare' },
+  'groups.removeFromCompare': { ru: 'Убрать из сравнения', en: 'Remove from compare' },
+  'groups.moreToCompare': { ru: 'нужно ещё для сравнения', en: 'more to compare' },
 
   // SatelliteCard
   'card.country': { ru: 'Страна', en: 'Country' },
@@ -29,12 +34,18 @@ const translations = {
   'card.velocity': { ru: 'Скорость', en: 'Velocity' },
   'card.centerOnMap': { ru: '📍 Центрировать на карте', en: '📍 Center on map' },
   'card.orbitTrack': { ru: 'Трек орбиты', en: 'Orbit track' },
+  'card.fullOrbit': { ru: 'Полная траектория', en: 'Full track' },
   'card.coverageZone': { ru: 'Зона покрытия', en: 'Coverage zone' },
   'card.link': { ru: '🔗 Связать', en: '🔗 Link' },
   'card.unlink': { ru: '🔗 Отвязать', en: '🔗 Unlink' },
   'card.linked': { ru: 'связано', en: 'linked' },
   'card.clearLinks': { ru: 'Очистить все связи', en: 'Clear all links' },
   'card.passesOverPoint': { ru: 'Пролёты над точкой', en: 'Passes over point' },
+  'card.orbitalParams': { ru: 'Орбитальные параметры', en: 'Orbital Parameters' },
+  'card.period': { ru: 'Период', en: 'Period' },
+  'card.altitude': { ru: 'Высота', en: 'Altitude' },
+  'card.inclination': { ru: 'Наклонение', en: 'Inclination' },
+  'card.raan': { ru: 'Восх. узел', en: 'RAAN' },
 
   // PassList
   'passes.title': { ru: 'Пролёты над', en: 'Passes over' },
@@ -66,6 +77,8 @@ const translations = {
   'settings.clusters': { ru: 'Кластеры', en: 'Clusters' },
   'settings.grid': { ru: 'Сетка координат', en: 'Coordinate Grid' },
   'settings.terminator': { ru: 'Тень Земли', en: 'Day/Night' },
+  'settings.groundTrack': { ru: 'Трек орбиты', en: 'Orbit track' },
+  'settings.fullTrack': { ru: 'Полная траектория', en: 'Full track' },
   'settings.language': { ru: 'Язык', en: 'Language' },
 
   // ZoomIndicator
@@ -97,12 +110,23 @@ const translations = {
   'purpose.earth-observation': { ru: 'Наблюдение Земли', en: 'Earth observation' },
   'purpose.scientific': { ru: 'Научный', en: 'Scientific' },
   'purpose.unknown': { ru: 'Неизвестно', en: 'Unknown' },
+
+  // Comparison table
+  'comparison.title': { ru: 'Сравнение группировок', en: 'Group Comparison' },
+  'comparison.clear': { ru: 'Очистить', en: 'Clear' },
+  'comparison.parameter': { ru: 'Параметр', en: 'Parameter' },
+  'comparison.totalCount': { ru: 'Всего спутников', en: 'Total satellites' },
+  'comparison.activeCount': { ru: 'Активных', en: 'Active now' },
+  'comparison.avgAltitudeKm': { ru: 'Средняя высота', en: 'Avg altitude' },
+  'comparison.avgVelocityKmS': { ru: 'Средняя скорость', en: 'Avg velocity' },
+  'comparison.minAltitudeKm': { ru: 'Мин. высота', en: 'Min altitude' },
+  'comparison.maxAltitudeKm': { ru: 'Макс. высота', en: 'Max altitude' },
 } as const
 
-type TranslationKey = keyof typeof translations
+type TranslationKey = keyof typeof translations | string
 
 export function t(key: TranslationKey, locale: Locale): string {
-  const entry = translations[key]
+  const entry = (translations as Record<string, { ru: string; en: string }>)[key]
   if (!entry) return key
   return entry[locale] ?? entry.en
 }

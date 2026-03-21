@@ -9,6 +9,7 @@ import NotificationToast from '@/components/ui/NotificationToast'
 import MapSettings from '@/components/ui/MapSettings'
 import ZoomIndicator from '@/components/ui/ZoomIndicator'
 import PointsPanel from '@/components/ui/PointsPanel'
+import GroupComparisonTable from '@/components/ui/GroupComparisonTable'
 import { useMapStore } from '@/store/useMapStore'
 
 const SatelliteMap = dynamic(
@@ -41,6 +42,7 @@ export default function Home() {
         <Timeline />
         <NotificationToast />
         <ZoomIndicator />
+        <GroupComparisonTable />
       </div>
     </main>
   )

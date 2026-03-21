@@ -151,6 +151,34 @@ export interface StatsResponse {
   lastTleSync: string
 }
 
+// Group statistics for comparison
+export interface GroupStats {
+  groupId: SatelliteGroup
+  totalCount: number
+  activeCount: number
+  avgAltitudeKm: number
+  avgVelocityKmS: number
+  minAltitudeKm: number
+  maxAltitudeKm: number
+  orbitDistribution: Record<OrbitType, number>
+}
+
+// Extended satellite detail with computed values
+export interface SatelliteDetail {
+  noradId: number
+  name: string
+  country: string
+  operator: string
+  orbitType: OrbitType
+  purpose: SatellitePurpose
+  altitudeKm: number
+  periodMin: number
+  inclinationDeg?: number
+  raan?: number
+  tle: TLE
+  currentPosition?: SatellitePosition
+}
+
 export type WorkerMessageIn = {
   type: 'CALCULATE'
   payload: { satellites: Satellite[]; timestamp: number }

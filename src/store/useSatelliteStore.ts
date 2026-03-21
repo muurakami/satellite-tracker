@@ -42,6 +42,8 @@ interface SatelliteStore {
   linkedSatellites: number[]
   // Pass alerts
   passAlerts: PassAlert[]
+  // Comparison groups (for table)
+  comparisonGroups: SatelliteGroup[]
   // Actions
   setSatellites: (s: Satellite[]) => void
   updatePositions: (positions: SatellitePosition[]) => void
@@ -58,6 +60,9 @@ interface SatelliteStore {
   getSatelliteLinks: () => SatelliteLink[]
   addPassAlert: (alert: PassAlert) => void
   dismissPassAlert: (id: string) => void
+  toggleComparisonGroup: (group: SatelliteGroup) => void
+  removeComparisonGroup: (group: SatelliteGroup) => void
+  clearComparisonGroups: () => void
   // Computed getters
   filteredSatellites: () => Satellite[]
   filteredByGroups: () => Satellite[]
@@ -77,6 +82,7 @@ export const useSatelliteStore = create<SatelliteStore>((set, get) => ({
   isRefreshing: false,
   linkedSatellites: [],
   passAlerts: [],
+  comparisonGroups: [],
 
   setSatellites: (satellites) => set({ satellites }),
 
@@ -162,6 +168,25 @@ export const useSatelliteStore = create<SatelliteStore>((set, get) => ({
         a.id === id ? { ...a, dismissed: true } : a
       ),
     })),
+
+  toggleComparisonGroup: (group) =>
+    set((state) => {
+      const exists = state.comparisonGroups.includes(group)
+      if (exists) {
+        return { comparisonGroups: state.comparisonGroups.filter((g) => g !== group) }
+      }
+      if (state.comparisonGroups.length >= 4) {
+        return state // Max 4 groups
+      }
+      return { comparisonGroups: [...state.comparisonGroups, group] }
+    }),
+
+  removeComparisonGroup: (group) =>
+    set((state) => ({
+      comparisonGroups: state.comparisonGroups.filter((g) => g !== group),
+    })),
+
+  clearComparisonGroups: () => set({ comparisonGroups: [] }),
 
   getSatelliteLinks: (): SatelliteLink[] => {
     const { linkedSatellites } = get()

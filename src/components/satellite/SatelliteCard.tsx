@@ -21,9 +21,11 @@ export default function SatelliteCard() {
   const selectSatellite = useSatelliteStore((s) => s.selectSatellite)
   const toggleGroundTrack = useMapStore((s) => s.toggleGroundTrack)
   const toggleCoverage = useMapStore((s) => s.toggleCoverage)
+  const toggleFullTrack = useMapStore((s) => s.toggleFullTrack)
   const selectedPoint = useMapStore((s) => s.selectedPoint)
   const showGroundTrack = useMapStore((s) => s.showGroundTrack)
   const showCoverage = useMapStore((s) => s.showCoverage)
+  const showFullTrack = useMapStore((s) => s.showFullTrack)
   const locale = useMapStore((s) => s.locale)
   const linkedSatellites = useSatelliteStore((s) => s.linkedSatellites)
   const toggleSatelliteLink = useSatelliteStore((s) => s.toggleSatelliteLink)
@@ -48,6 +50,10 @@ export default function SatelliteCard() {
 
       <div className="space-y-1 text-sm text-zinc-300">
         <p>
+          <span className="text-zinc-500">NORAD:</span>{' '}
+          {selectedSatellite.noradId}
+        </p>
+        <p>
           <span className="text-zinc-500">{t('card.country', locale)}:</span>{' '}
           {selectedSatellite.country}
         </p>
@@ -62,10 +68,32 @@ export default function SatelliteCard() {
           <span className="px-2 py-0.5 rounded bg-zinc-700 text-xs">
             {selectedSatellite.purpose}
           </span>
+        </div>
+      </div>
+
+      {/* Orbital parameters */}
+      <div className="mt-3 space-y-1 text-sm text-zinc-300 border-t border-zinc-700 pt-3">
+        <p className="text-xs text-zinc-500 uppercase tracking-wide">{t('card.orbitalParams', locale)}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="text-zinc-500 text-xs">{t('card.period', locale)}:</span>{' '}
+            <span>{selectedSatellite.periodMin.toFixed(1)} min</span>
+          </div>
+          <div>
+            <span className="text-zinc-500 text-xs">{t('card.altitude', locale)}:</span>{' '}
+            <span>{selectedSatellite.altitudeKm.toFixed(0)} km</span>
+          </div>
           {selectedSatellite.inclinationDeg !== undefined && (
-            <span className="px-2 py-0.5 rounded bg-zinc-700 text-xs">
-              i={selectedSatellite.inclinationDeg.toFixed(1)}°
-            </span>
+            <div>
+              <span className="text-zinc-500 text-xs">{t('card.inclination', locale)}:</span>{' '}
+              <span>{selectedSatellite.inclinationDeg.toFixed(1)}°</span>
+            </div>
+          )}
+          {selectedSatellite.raan !== undefined && (
+            <div>
+              <span className="text-zinc-500 text-xs">{t('card.raan', locale)}:</span>{' '}
+              <span>{selectedSatellite.raan.toFixed(1)}°</span>
+            </div>
           )}
         </div>
       </div>
@@ -117,6 +145,16 @@ export default function SatelliteCard() {
           }`}
         >
           {t('card.coverageZone', locale)}
+        </button>
+        <button
+          onClick={toggleFullTrack}
+          className={`px-3 py-1.5 rounded text-sm ${
+            showFullTrack
+              ? 'bg-purple-600 text-white'
+              : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+          }`}
+        >
+          {t('card.fullOrbit', locale)}
         </button>
         {/* Satellite Link button (KSP-style) */}
         <button

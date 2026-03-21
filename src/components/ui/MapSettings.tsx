@@ -36,7 +36,12 @@ export default function MapSettings() {
   const toggleClusters = useMapStore((s) => s.toggleClusters)
   const toggleGrid = useMapStore((s) => s.toggleGrid)
   const toggleTerminator = useMapStore((s) => s.toggleTerminator)
+  const toggleGroundTrack = useMapStore((s) => s.toggleGroundTrack)
+  const toggleFullTrack = useMapStore((s) => s.toggleFullTrack)
   const setLocale = useMapStore((s) => s.setLocale)
+
+  const showGroundTrack = useMapStore((s) => s.showGroundTrack)
+  const showFullTrack = useMapStore((s) => s.showFullTrack)
 
   return (
     <div className="fixed z-50 pointer-events-auto" style={{ top: '4rem', right: '1rem' }}>
@@ -200,6 +205,28 @@ export default function MapSettings() {
               }`}
             >
               {showTerminator ? `🌙 ${t('settings.terminator', locale)}` : `⭕ ${t('settings.terminator', locale)}`}
+            </button>
+
+            <button
+              onClick={toggleGroundTrack}
+              className={`w-full px-3 py-2 rounded text-sm text-left transition-colors ${
+                showGroundTrack
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+              }`}
+            >
+              {showGroundTrack ? `🛰️ ${t('settings.groundTrack', locale)}` : `⭕ ${t('settings.groundTrack', locale)}`}
+            </button>
+
+            <button
+              onClick={toggleFullTrack}
+              className={`w-full px-3 py-2 rounded text-sm text-left transition-colors ${
+                showFullTrack
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+              }`}
+            >
+              {showFullTrack ? `🌐 ${t('settings.fullTrack', locale)}` : `⭕ ${t('settings.fullTrack', locale)}`}
             </button>
           </div>
         </div>
