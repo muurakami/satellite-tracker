@@ -55,6 +55,7 @@ interface MapStore {
   mapBounds: MapBounds | null
   showHeatmap: boolean
   showClusters: boolean
+  showGrid: boolean
   // i18n
   locale: Locale
   // Actions
@@ -74,6 +75,8 @@ interface MapStore {
   toggleHeatmap: () => void
   setShowClusters: (value: boolean) => void
   toggleClusters: () => void
+  setShowGrid: (value: boolean) => void
+  toggleGrid: () => void
   setLocale: (locale: Locale) => void
 }
 
@@ -91,6 +94,7 @@ export const useMapStore = create<MapStore>((set) => ({
   mapBounds: null,
   showHeatmap: false,
   showClusters: true,
+  showGrid: false,
   locale: 'ru' as Locale,
 
   setSelectedPoint: (p) => {
@@ -130,5 +134,7 @@ export const useMapStore = create<MapStore>((set) => ({
   toggleHeatmap: () => set((state) => ({ showHeatmap: !state.showHeatmap })),
   setShowClusters: (value) => set({ showClusters: value }),
   toggleClusters: () => set((state) => ({ showClusters: !state.showClusters })),
+  setShowGrid: (value) => set({ showGrid: value }),
+  toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
   setLocale: (locale) => set({ locale }),
 }))

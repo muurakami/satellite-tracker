@@ -25,6 +25,7 @@ export default function MapSettings() {
   const orbitScale = useMapStore((s) => s.orbitScale)
   const showHeatmap = useMapStore((s) => s.showHeatmap)
   const showClusters = useMapStore((s) => s.showClusters)
+  const showGrid = useMapStore((s) => s.showGrid)
   const locale = useMapStore((s) => s.locale)
   const setMapTheme = useMapStore((s) => s.setMapTheme)
   const setSelectedSatelliteColor = useMapStore((s) => s.setSelectedSatelliteColor)
@@ -32,6 +33,7 @@ export default function MapSettings() {
   const setOrbitScale = useMapStore((s) => s.setOrbitScale)
   const toggleHeatmap = useMapStore((s) => s.toggleHeatmap)
   const toggleClusters = useMapStore((s) => s.toggleClusters)
+  const toggleGrid = useMapStore((s) => s.toggleGrid)
   const setLocale = useMapStore((s) => s.setLocale)
 
   return (
@@ -174,6 +176,17 @@ export default function MapSettings() {
               }`}
             >
               {showHeatmap ? `🔥 ${t('settings.heatmap', locale)}` : `⭕ ${t('settings.heatmap', locale)}`}
+            </button>
+
+            <button
+              onClick={toggleGrid}
+              className={`w-full px-3 py-2 rounded text-sm text-left transition-colors ${
+                showGrid
+                  ? 'bg-cyan-600 text-white'
+                  : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+              }`}
+            >
+              {showGrid ? `✅ ${t('settings.grid', locale)}` : `⭕ ${t('settings.grid', locale)}`}
             </button>
           </div>
         </div>

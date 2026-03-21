@@ -16,6 +16,7 @@ import GroundTrack from './GroundTrack'
 import CoverageCone from './CoverageCone'
 import ClusterMarker from './ClusterMarker'
 import SatelliteLinks from './SatelliteLinks'
+import CoordinateGrid from './CoordinateGrid'
 
 const ORBIT_COLORS: Record<OrbitType, string> = {
   LEO: '#00ff88',
@@ -326,6 +327,9 @@ export default function SatelliteMap() {
       mapLib={maplibregl}
     >
       <NavigationControl position="top-right" />
+
+      {/* Coordinate grid overlay */}
+      <CoordinateGrid />
 
       {/* Heatmap layer */}
       {showHeatmap && (

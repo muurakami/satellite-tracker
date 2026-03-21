@@ -50,6 +50,7 @@ const translations = {
   'settings.selectedColor': { ru: 'Цвет выделения', en: 'Selection color' },
   'settings.heatmap': { ru: 'Тепловая карта', en: 'Heatmap' },
   'settings.clusters': { ru: 'Кластеры', en: 'Clusters' },
+  'settings.grid': { ru: 'Сетка координат', en: 'Coordinate Grid' },
   'settings.language': { ru: 'Язык', en: 'Language' },
 
   // ZoomIndicator
