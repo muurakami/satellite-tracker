@@ -2,6 +2,7 @@
 
 import { useSatelliteStore } from '@/store/useSatelliteStore'
 import { useMapStore } from '@/store/useMapStore'
+import { useStopMapPropagation } from '@/hooks/useStopMapPropagation'
 import { t } from '@/lib/i18n'
 
 // Global event for centering on map
@@ -14,6 +15,7 @@ export function centerOnMap() {
 }
 
 export default function SatelliteCard() {
+  const { ref: panelRef, stopProps } = useStopMapPropagation()
   const selectedSatellite = useSatelliteStore((s) => s.selectedSatellite)
   const positions = useSatelliteStore((s) => s.positions)
   const selectSatellite = useSatelliteStore((s) => s.selectSatellite)
@@ -33,7 +35,7 @@ export default function SatelliteCard() {
   const isLinked = linkedSatellites.includes(selectedSatellite.noradId)
 
   return (
-    <div className="fixed top-4 right-4 z-50 w-80 bg-zinc-900 rounded-xl p-4 text-white shadow-lg pointer-events-auto">
+    <div ref={panelRef} {...stopProps} className="fixed top-4 right-4 z-50 w-80 bg-zinc-900 rounded-xl p-4 text-white shadow-lg pointer-events-auto">
       <div className="flex justify-between items-start mb-3">
         <h2 className="text-lg font-bold">{selectedSatellite.name}</h2>
         <button

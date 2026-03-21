@@ -1,9 +1,11 @@
 'use client'
 
 import { useMapStore } from '@/store/useMapStore'
+import { useStopMapPropagation } from '@/hooks/useStopMapPropagation'
 import { t } from '@/lib/i18n'
 
 export default function PointsPanel() {
+  const { ref: panelRef, stopProps } = useStopMapPropagation()
   const points = useMapStore((s) => s.observationPoints)
   const activePointId = useMapStore((s) => s.activePointId)
   const setActivePoint = useMapStore((s) => s.setActivePoint)
@@ -34,7 +36,9 @@ export default function PointsPanel() {
 
   return (
     <div
-      className={`fixed bottom-4 left-4 z-40 w-56 bg-zinc-900/95 backdrop-blur-sm rounded-xl border text-white shadow-xl transition-all ${
+      ref={panelRef}
+      {...stopProps}
+      className={`fixed bottom-4 left-4 z-40 w-56 bg-zinc-900/95 backdrop-blur-sm rounded-xl border text-white shadow-xl transition-all pointer-events-auto ${
         isAddingPoint
           ? 'border-blue-400 animate-pulse'
           : 'border-zinc-800'
@@ -85,6 +89,18 @@ export default function PointsPanel() {
                     {formatCoord(point.lat, point.lon)}
                   </span>
                 </div>
+
+                {/* Copy button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigator.clipboard.writeText(`${point.lat.toFixed(6)}, ${point.lon.toFixed(6)}`)
+                  }}
+                  className="w-6 h-6 flex items-center justify-center rounded text-white/40 hover:text-white/80 hover:bg-white/10 transition-all text-xs flex-shrink-0"
+                  title={t('pin.copy', locale)}
+                >
+                  📋
+                </button>
 
                 {/* Remove button */}
                 <button

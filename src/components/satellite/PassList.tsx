@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useMapStore } from '@/store/useMapStore'
 import { useSatelliteStore } from '@/store/useSatelliteStore'
 import { useSimulationStore } from '@/store/useSimulationStore'
+import { useStopMapPropagation } from '@/hooks/useStopMapPropagation'
 import { getPassesForPoint } from '@/lib/api'
 import { calculatePasses, calculateGeoVisible } from '@/lib/pass-predictor'
 import { t } from '@/lib/i18n'
@@ -43,6 +44,7 @@ function LoadingSkeleton() {
 }
 
 export default function PassList() {
+  const { ref: panelRef, stopProps } = useStopMapPropagation()
   const selectedPoint = useMapStore((s) => s.selectedPoint)
   const locale = useMapStore((s) => s.locale)
   const setSelectedPoint = useMapStore((s) => s.setSelectedPoint)
@@ -55,6 +57,7 @@ export default function PassList() {
   const [geoVisible, setGeoVisible] = useState<GeoSatelliteVisible[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (!selectedPoint) {
@@ -131,16 +134,31 @@ export default function PassList() {
   const thirtyMinMs = 30 * 60 * 1000
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 w-72 max-h-96 overflow-y-auto bg-zinc-900/95 backdrop-blur-sm rounded-xl border border-zinc-800 text-white shadow-xl">
+    <div ref={panelRef} {...stopProps} className="fixed bottom-4 left-4 z-50 w-72 max-h-96 overflow-y-auto bg-zinc-900/95 backdrop-blur-sm rounded-xl border border-zinc-800 text-white shadow-xl pointer-events-auto">
       {/* Header */}
       <div className="sticky top-0 bg-zinc-900/95 backdrop-blur-sm px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">
             {t('passes.title', locale)}
           </h3>
-          <p className="text-xs text-zinc-400">
-            {formatCoord(selectedPoint.lat, selectedPoint.lon)}
-          </p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <p className="text-xs text-zinc-400">
+              {formatCoord(selectedPoint.lat, selectedPoint.lon)}
+            </p>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  `${selectedPoint.lat.toFixed(6)}, ${selectedPoint.lon.toFixed(6)}`
+                )
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              }}
+              className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white/50 hover:text-white text-[10px] transition-all min-w-[60px] justify-center"
+              title={t('points.copy_coords', locale)}
+            >
+              {copied ? '✓ Скопировано' : '📋 Копировать'}
+            </button>
+          </div>
         </div>
         <button
           onClick={() => setSelectedPoint(null)}

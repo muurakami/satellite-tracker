@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSatelliteStore } from '@/store/useSatelliteStore'
 import { useMapStore } from '@/store/useMapStore'
+import { useStopMapPropagation } from '@/hooks/useStopMapPropagation'
 import type { OrbitType, SatellitePurpose } from '@/types/satellite'
 import { t } from '@/lib/i18n'
 import { fetchCelesTrakTLEFromText } from '@/lib/celestrak'
@@ -20,6 +21,7 @@ const PURPOSE_OPTIONS: (SatellitePurpose | '')[] = [
 ]
 
 export default function FilterPanel() {
+  const { ref: panelRef, stopProps } = useStopMapPropagation()
   const setFilters = useSatelliteStore((s) => s.setFilters)
   const filteredByGroups = useSatelliteStore((s) => s.filteredByGroups)
   const viewportOnly = useMapStore((s) => s.viewportOnly)
@@ -82,7 +84,7 @@ export default function FilterPanel() {
   }
 
   return (
-    <div className="fixed top-4 left-4 z-50 w-64 bg-zinc-900 rounded-xl p-4 text-white shadow-lg pointer-events-auto">
+    <div ref={panelRef} {...stopProps} className="fixed top-4 left-4 z-50 w-64 bg-zinc-900 rounded-xl p-4 text-white shadow-lg pointer-events-auto">
       {/* Header with refresh button */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold">{t('filters.title', locale)}</h3>

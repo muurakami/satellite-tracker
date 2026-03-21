@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSatelliteStore, type PassAlert } from '@/store/useSatelliteStore'
 import { startPassNotifier } from '@/lib/pass-notifier'
+import { useStopMapPropagation } from '@/hooks/useStopMapPropagation'
 
 // Orbit type colors
 const ORBIT_COLORS: Record<string, string> = {
@@ -23,6 +24,7 @@ function getOrbitColor(satelliteName: string): string {
 }
 
 export default function NotificationToast() {
+  const { ref: panelRef, stopProps } = useStopMapPropagation()
   const passAlerts = useSatelliteStore((s) => s.passAlerts)
   const dismissPassAlert = useSatelliteStore((s) => s.dismissPassAlert)
 
@@ -91,7 +93,7 @@ export default function NotificationToast() {
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 pointer-events-auto">
+    <div ref={panelRef} {...stopProps} className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 pointer-events-auto">
       {toasts.map((toast) => {
         const isExiting = exitingIds.has(toast.alert.id)
         const progress = (toast.remainingSeconds / 10) * 100

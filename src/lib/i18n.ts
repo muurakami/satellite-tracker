@@ -51,6 +51,11 @@ const translations = {
   'presets.add': { ru: 'Добавить', en: 'Add' },
   'presets.exists': { ru: 'Уже добавлена', en: 'Already added' },
 
+  // Pin copy
+  'pin.copy': { ru: 'Копировать координаты', en: 'Copy coordinates' },
+  'pin.copied': { ru: '✓ Скопировано', en: '✓ Copied' },
+  'points.copy_coords': { ru: 'Копировать координаты', en: 'Copy coordinates' },
+
   // MapSettings
   'settings.title': { ru: 'Настройки карты', en: 'Map Settings' },
   'settings.theme': { ru: 'Тема', en: 'Theme' },
