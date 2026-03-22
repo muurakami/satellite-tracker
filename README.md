@@ -1,36 +1,435 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🛰️ Satellite Tracker
 
-## Getting Started
+Веб-приложение для отслеживания спутников в реальном времени с 2D/3D визуализацией, расчётом орбитальной механики, предсказанием пролётов и сравнением группировок.
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
+![MapLibre](https://img.shields.io/badge/MapLibre-GL-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+---
+
+## 📋 Содержание
+
+- [Обзор](#обзор)
+- [Возможности](#возможности)
+- [Стек технологий](#стек-технологий)
+- [Архитектура](#архитектура)
+- [Установка](#установка)
+- [Запуск проекта](#запуск-проекта)
+- [Структура проекта](#структура-проекта)
+- [Ключевые модули](#ключевые-модули)
+- [Конфигурация](#конфигурация)
+- [Известные ограничения](#известные-ограничения)
+
+---
+
+## Обзор
+
+Satellite Tracker визуализирует позиции тысяч спутников в реальном времени, используя данные TLE (Two-Line Element) с [CelesTrak](https://celestrak.org). Орбитальная механика рассчитывается алгоритмом SGP4 в Web Worker — это гарантирует отзывчивость интерфейса даже при работе с десятками тысяч объектов. Приложение поддерживает 2D-карту и 3D-глобус, отрисовку траекторий, визуализацию зон покрытия, предсказание пролётов и сравнение группировок спутниковых систем.
+
+---
+
+## Возможности
+
+### 🗺️ Карта и визуализация
+
+- **2D-карта** — MapLibre GL с выбором темы (Тёмная, Светлая, Спутниковая, Рельеф)
+- **3D-глобус** — React Three Fiber с атмосферным свечением
+- **Маркеры спутников** — цветовая кодировка по типу орбиты (LEO / MEO / GEO / HEO)
+- **Кластеризация** — группировка через supercluster при малом масштабе
+- **Тепловая карта** — визуализация плотности распределения спутников
+- **Терминатор** — граница день/ночь в реальном времени через SunCalc
+- **Сетка координат** — отключаемая градусная сетка поверх карты
+
+### 🛰️ Орбитальная механика
+
+- **Распространение SGP4** — через `satellite.js` в выделенном Web Worker
+- **Трек орбиты** — ломаная линия предстоящего пути (3 или 10 витков)
+- **Фикс антимеридиана** — непрерывное разматывание долготы (170° → 190° вместо 170° → -170°)
+- **Зона покрытия** — градиентные кольца (внутренняя / средняя / краевая зона) по углу места
+
+### 📡 Данные
+
+- **CelesTrak API** — актуальные TLE для GPS, ГЛОНАСС, Galileo, BeiDou, Starlink, МКС, метеоспутников и других
+- **Загрузка TLE-файлов** — поддержка `.tle` / `.txt` / `.3le`
+- **WebSocket** — обновления позиций в реальном времени по протоколу STOMP
+- **Mock-данные** — офлайн-заглушка для разработки
+
+### 🔍 Фильтрация и поиск
+
+- **Фильтр по группировкам** — включение/выключение группировок (GPS, ГЛОНАСС, Galileo, BeiDou, Starlink и др.)
+- **Фильтр по типу орбиты** — LEO / MEO / GEO / HEO
+- **Фильтр по назначению** — навигация, связь, ДЗЗ, наука
+- **Текстовый поиск** — поиск по имени среди всех спутников (игнорирует групповой фильтр)
+- **Фильтр по области карты** — показывать только спутники в текущем viewport
+- **Режим производительности** — ограничение количества рендеримых спутников (настраиваемый лимит, по умолчанию 500)
+
+### 🌐 Сравнение группировок
+
+- **Мультивыбор** — до 4 группировок одновременно
+- **Таблица статистики** — общее количество, активных, средняя высота, средняя скорость, мин/макс высота, покрытие Земли %
+- **Подсветка лучших значений** — зелёным выделяется лучший показатель в строке
+- **Нижний drawer** — сворачиваемая панель под картой
+
+### 📋 Карточка спутника
+
+- Текущая позиция (широта / долгота / высота / скорость)
+- Орбитальные параметры (период, наклонение, RAAN, эксцентриситет)
+- Предсказание следующего пролёта (AOS / LOS / максимальный угол места) для выбранной точки наблюдения
+- Действия: центрировать на карте, трек орбиты, полный трек (10 витков), переключение зоны покрытия, привязка спутников (KSP-style цепочка)
+
+### 🔔 Предсказание и уведомления
+
+- **Предсказатель пролётов** — вычисляет AOS / LOS / максимальный угол места над наземной точкой
+- **Уведомления** — toast-алерты перед предстоящими пролётами
+- **Точки наблюдения** — перетаскиваемые пины, пресеты городов
+
+### ⚙️ Настройки
+
+- Переключение языка (RU / EN)
+- Выбор темы карты
+- Режим отображения (2D / 3D наклон / 3D глобус)
+- Настройки зоны покрытия (количество колец градиента, минимальный угол места)
+- Тепловая карта
+- Сетка координат
+- Таймлайн симуляции (play/pause, управление скоростью)
+
+---
+
+## Стек технологий
+
+| Слой                | Технология                       |
+| ------------------- | -------------------------------- |
+| Фреймворк           | Next.js 16 (App Router)          |
+| Язык                | TypeScript 5 (strict)            |
+| Стили               | Tailwind CSS 3                   |
+| 2D-карта            | MapLibre GL + react-map-gl       |
+| 3D-глобус           | React Three Fiber + Three.js     |
+| Состояние           | Zustand                          |
+| Орбитальные расчёты | satellite.js (SGP4) в Web Worker |
+| Кластеризация       | supercluster                     |
+| Позиция Солнца      | SunCalc                          |
+| Реальное время      | STOMP over WebSocket             |
+| Источник данных     | CelesTrak API                    |
+
+---
+
+## Архитектура
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  Next.js приложение                  │
+│                                                      │
+│  ┌──────────────┐         ┌───────────────────────┐ │
+│  │  Левый sidebar│         │     Область карты     │ │
+│  │  (FilterPanel)│         │                       │ │
+│  │               │         │  ┌─────────────────┐  │ │
+│  │  GroupSelector│         │  │  SatelliteMap   │  │ │
+│  │  OrbitFilter  │         │  │  (MapLibre GL)  │  │ │
+│  │  PurposeFilter│         │  │                 │  │ │
+│  │  SearchInput  │         │  │  + GroundTrack  │  │ │
+│  │  Settings     │         │  │  + Coverage     │  │ │
+│  └──────────────┘         │  │  + Terminator   │  │ │
+│                            │  │  + Grid         │  │ │
+│                            │  └─────────────────┘  │ │
+│                            │                       │ │
+│                            │  ┌─────────────────┐  │ │
+│                            │  │ComparisonDrawer │  │ │
+│                            │  └─────────────────┘  │ │
+│                            └───────────────────────┘ │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│              Слой состояния (Zustand)                 │
+│                                                      │
+│  useSatelliteStore   useMapStore   useCoverageStore  │
+│  useSimulationStore                                  │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│               Web Worker (SGP4)                      │
+│                                                      │
+│  satellite-worker.ts                                 │
+│  Вход:  Satellite[] + timestamp                      │
+│  Выход: SatellitePosition[] (lat/lon/alt/velocity)   │
+└─────────────────────────────────────────────────────┘
+```
+
+### Поток данных
+
+```
+CelesTrak API
+     │
+     ▼
+getSatellites() → парсинг TLE → Satellite[]
+     │
+     ▼
+useSatelliteStore.setSatellites()
+     │
+     ▼
+satellite-worker.ts (SGP4 каждый тик)
+     │
+     ▼
+useSatelliteStore.updatePositions()
+     │
+     ▼
+SatelliteMap → GeoJSON → слои MapLibre GL
+```
+
+---
+
+## Установка
+
+### Требования
+
+- **Node.js** 18+
+- **npm** 9+ (или pnpm / yarn)
+- Git
+
+### Клонирование и установка зависимостей
+
+```bash
+# Клонировать репозиторий
+git clone https://github.com/your-username/satellite-tracker.git
+cd satellite-tracker
+
+# Установить зависимости
+npm install
+```
+
+### Переменные окружения
+
+Создай файл `.env.local` в корне проекта:
+
+```env
+# Опционально: URL WebSocket-сервера для обновлений в реальном времени
+# Оставь пустым чтобы использовать только mock-данные / CelesTrak
+NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
+
+# Опционально: переопределить базовый URL CelesTrak
+NEXT_PUBLIC_CELESTRAK_URL=https://celestrak.org
+```
+
+> Без WebSocket-сервера приложение полностью работает офлайн — через CelesTrak HTTP API и локальный расчёт SGP4.
+
+---
+
+## Запуск проекта
+
+### Режим разработки
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Открой [http://localhost:3000](http://localhost:3000) в браузере.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Hot reload включён. Изменения в Web Worker требуют полной перезагрузки страницы.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Продакшн сборка
 
-## Learn More
+```bash
+# Сборка
+npm run build
 
-To learn more about Next.js, take a look at the following resources:
+# Запуск продакшн-сервера
+npm run start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Проверка типов TypeScript
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npx tsc --noEmit
+```
 
-## Deploy on Vercel
+### Линтинг
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run lint
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Структура проекта
+
+```
+satellite-tracker/
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx              # Корневой layout
+│   │   └── page.tsx                # Главная страница — grid (sidebar + карта)
+│   │
+│   ├── components/
+│   │   ├── map/
+│   │   │   ├── SatelliteMap.tsx        # Основная карта MapLibre GL
+│   │   │   ├── Globe3D.tsx             # 3D-глобус React Three Fiber
+│   │   │   ├── GroundTrack.tsx         # Трек орбиты с фиксом антимеридиана
+│   │   │   ├── EnhancedCoverageZone.tsx# Градиентная зона покрытия
+│   │   │   ├── CoverageCone.tsx        # Простой конус покрытия
+│   │   │   ├── ClusterMarker.tsx       # Маркеры кластеров supercluster
+│   │   │   ├── SatelliteLinks.tsx      # KSP-style цепочки спутников
+│   │   │   ├── CoordinateGrid.tsx      # Сетка координат
+│   │   │   ├── Terminator.tsx          # Граница день/ночь
+│   │   │   └── ObservationPins.tsx     # Перетаскиваемые точки наблюдения
+│   │   │
+│   │   ├── ui/
+│   │   │   ├── FilterPanel.tsx         # Левый sidebar
+│   │   │   ├── GroupSelector.tsx       # Мультивыбор группировок
+│   │   │   ├── MapSettings.tsx         # Выпадающие настройки (⚙️)
+│   │   │   ├── CoverageSettings.tsx    # Настройки зоны покрытия
+│   │   │   ├── GroupComparisonTable.tsx# Таблица сравнения группировок
+│   │   │   ├── ComparisonDrawer.tsx    # Нижний drawer-контейнер
+│   │   │   ├── NotificationToast.tsx   # Toast-уведомления о пролётах
+│   │   │   ├── AddPointButton.tsx      # Добавление точки наблюдения
+│   │   │   └── LocationPresets.tsx     # Пресеты городов
+│   │   │
+│   │   └── satellite/
+│   │       └── SatelliteCard.tsx       # Детальная карточка спутника
+│   │
+│   ├── store/
+│   │   ├── useSatelliteStore.ts        # Спутники, позиции, фильтры, группы
+│   │   ├── useMapStore.ts              # Состояние карты, темы, viewport, locale
+│   │   ├── useCoverageStore.ts         # Настройки зоны покрытия
+│   │   └── useSimulationStore.ts       # Симуляция таймлайна
+│   │
+│   ├── lib/
+│   │   ├── satellite-worker.ts         # Web Worker — расчёт позиций SGP4
+│   │   ├── celestrak.ts                # CelesTrak API + парсер TLE
+│   │   ├── coverage-geometry.ts        # Генерация полигонов footprint
+│   │   ├── unwrapCoordinates.ts        # Фикс антимеридиана
+│   │   ├── pass-predictor.ts           # Расчёт AOS/LOS/угла места
+│   │   ├── pass-notifier.ts            # Планировщик уведомлений о пролётах
+│   │   ├── terminator.ts               # Граница день/ночь через SunCalc
+│   │   ├── ws-client.ts                # STOMP WebSocket клиент
+│   │   ├── api.ts                      # HTTP API обёртка
+│   │   ├── mock-data.ts                # Офлайн-заглушка
+│   │   ├── viewport-filter.ts          # Фильтр спутников по bounds карты
+│   │   └── i18n.ts                     # Переводы RU/EN
+│   │
+│   ├── hooks/
+│   │   ├── useSupercluster.ts          # Хук кластеризации
+│   │   ├── useGroupStats.ts            # Агрегированная статистика группировок
+│   │   └── useStopMapPropagation.ts    # Блокировка кликов сквозь UI на карту
+│   │
+│   └── types/
+│       └── satellite.ts                # Основные TypeScript типы
+│
+├── public/
+├── .env.local                          # Переменные окружения (создать вручную)
+├── next.config.ts
+├── tailwind.config.ts
+└── tsconfig.json
+```
+
+---
+
+## Ключевые модули
+
+### `satellite-worker.ts`
+
+Web Worker выполняет распространение SGP4 вне основного потока.
+
+- Вход: `{ type: 'CALCULATE', payload: { satellites, timestamp } }`
+- Выход: `{ type: 'POSITIONS', payload: SatellitePosition[] }`
+- Все спутники батчатся в одном `postMessage` для минимизации IPC-накладных расходов
+
+### `unwrapCoordinates.ts`
+
+Устраняет артефакт пересечения антимеридиана в треках орбит.
+
+```typescript
+// Без фикса: 170° → -170° → MapLibre рисует линию через всю карту
+// С фиксом:  170° → 190°  → непрерывная долгота, корректный рендер
+unwrapLongitudes(coords: [number, number][]): [number, number][]
+splitIntoOrbits(coords, pointsPerOrbit): [number, number][][]
+```
+
+### `coverage-geometry.ts`
+
+Вычисляет наземный след спутника в виде GeoJSON-полигонов.
+
+- Использует формулу центрального угла Земли: `ρ = arccos(R / (R + alt))`
+- Генерирует 1–5 концентрических колец (внутренняя / средняя / краевая зоны)
+- Каждое кольцо — отдельный GeoJSON Feature со свойством `zone` для `case`-выражений MapLibre
+
+### `pass-predictor.ts`
+
+Предсказывает когда спутник будет виден из наземной точки.
+
+- Возвращает: `{ aos: Date, los: Date, maxElevationDeg: number }`
+- Шаг распространения 60 секунд на окне 24 часа
+
+### `celestrak.ts`
+
+Получает и парсит TLE-данные с CelesTrak.
+
+- Поддерживает все основные группировки: GPS, ГЛОНАСС, Galileo, BeiDou, Starlink, МКС, метеоспутники, космический мусор
+- Извлекает период, наклонение, RAAN, эксцентриситет напрямую из строк TLE
+
+---
+
+## Конфигурация
+
+### Добавить новую группировку спутников
+
+В `src/types/satellite.ts`:
+
+```typescript
+export const GROUP_CONFIG = {
+  // Добавить новую запись:
+  oneweb: {
+    label: "OneWeb",
+    filter: { q: "ONEWEB" },
+    color: "#ff6600",
+  },
+};
+```
+
+### Добавить новую тему карты
+
+В `src/store/useMapStore.ts`:
+
+```typescript
+export const MAP_THEMES = {
+  // Добавить новую запись:
+  topo: {
+    label: "Топографическая",
+    tiles: ["https://tile.opentopomap.org/{z}/{x}/{y}.png"],
+  },
+};
+```
+
+### Добавить перевод
+
+В `src/lib/i18n.ts`:
+
+```typescript
+'my.new.key': {
+  en: 'English text',
+  ru: 'Русский текст',
+},
+```
+
+---
+
+## Известные ограничения
+
+| Проблема                                             | Статус                                                |
+| ---------------------------------------------------- | ----------------------------------------------------- |
+| Rate limiting CelesTrak при первой загрузке          | Обрабатывается кэшированием; перезагрузить если пусто |
+| TLE-данные устаревают через ~2 недели                | Использовать кнопку 🔄 Обновить                       |
+| 3D-глобус не показывает маркеры спутников (R3F слой) | В планах                                              |
+| Зона покрытия отображается только в текущей позиции  | По замыслу — обновляется каждый тик                   |
+| WebSocket требует отдельного backend-сервера         | Опционально; приложение работает без него             |
+| Точность предсказания пролётов: ±1 мин               | Шаг разрешения 60 секунд                              |
+
+---
+
+## Лицензия
+
+MIT © 2024
+
+---
+
+_Создано с использованием [satellite.js](https://github.com/shashwatak/satellite-js), [MapLibre GL](https://maplibre.org), [CelesTrak](https://celestrak.org)_
