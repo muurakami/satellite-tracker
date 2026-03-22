@@ -2,9 +2,11 @@
 
 Real-time satellite tracking web application with 2D/3D visualization, orbital mechanics, pass prediction, and constellation comparison.
 
-![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![Next.js](https://img.shields.io/badge/Next.js-16.2-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19-blue?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
-![MapLibre](https://img.shields.io/badge/MapLibre-GL-blue)
+![MapLibre](https://img.shields.io/badge/MapLibre-GL-green)
+![React Three Fiber](https://img.shields.io/badge/3D-R3F-black)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -17,16 +19,32 @@ Real-time satellite tracking web application with 2D/3D visualization, orbital m
 - [Architecture](#architecture)
 - [Installation](#installation)
 - [Running the Project](#running-the-project)
+- [Docker](#docker)
 - [Project Structure](#project-structure)
 - [Key Modules](#key-modules)
 - [Configuration](#configuration)
+- [Environment Variables](#environment-variables)
 - [Known Limitations](#known-limitations)
 
 ---
 
 ## Overview
 
-Satellite Tracker visualizes real-time positions of thousands of satellites using TLE (Two-Line Element) data from [CelesTrak](https://celestrak.org). Orbital mechanics are computed via the SGP4 algorithm in a Web Worker to keep the UI responsive. The app supports both 2D map and 3D globe views, ground track rendering, coverage zone visualization, pass prediction, and multi-constellation comparison.
+**Satellite Tracker** is an interactive web application for visualizing and tracking satellites on a world map. It supports displaying thousands of satellites in real-time using TLE (Two-Line Element) data from [CelesTrak](https://celestrak.org).
+
+Orbital mechanics are calculated using the SGP4 algorithm via `satellite.js` library in a dedicated Web Worker — this ensures UI responsiveness even when working with a large number of objects.
+
+### Key Features
+
+- 🌐 **2D Map** (MapLibre GL) and **3D Globe** (React Three Fiber)
+- 🛰️ **8 Satellite Constellations**: GPS, GLONASS, Galileo, BeiDou, Starlink, OneWeb, Iridium, GEO
+- 📡 **Coverage Zones** with gradient visualization
+- 🔮 **3D Mode** with tilt and atmospheric glow
+- 🔔 **Pass Prediction** for ground observation points
+- 📊 **Constellation Comparison** with statistics
+- 🌅 **Terminator** — real-time day/night boundary
+- 🔗 **KSP-style Links** — connecting satellites together
+- 🌡️ **Heatmap** of satellite distribution
 
 ---
 
@@ -34,146 +52,154 @@ Satellite Tracker visualizes real-time positions of thousands of satellites usin
 
 ### 🗺️ Map & Visualization
 
-- **2D Map** — MapLibre GL with selectable themes (Dark, Light, Satellite, Terrain)
-- **3D Globe** — React Three Fiber globe with atmospheric glow
-- **Satellite markers** — color-coded by orbit type (LEO / MEO / GEO / HEO)
-- **Clustering** — supercluster-based grouping at low zoom levels
-- **Heatmap layer** — density visualization of satellite distribution
-- **Terminator** — real-time day/night boundary via SunCalc
-- **Coordinate grid** — toggleable graticule overlay
+| Feature | Description |
+|---------|-------------|
+| **2D Map** | MapLibre GL with 4 themes: Dark (CartoDB Dark), Light (CartoDB Light), Satellite (ArcGIS World Imagery), Terrain (OpenTopoMap) |
+| **3D Globe** | React Three Fiber with atmospheric glow, loading animation, and interactive controls |
+| **3D Tilt** | 2.5D mode with map tilt and perspective |
+| **Satellite Markers** | Color-coded by orbit type: LEO `#00ff88`, MEO `#ffaa00`, GEO `#ff4466`, HEO `#aa88ff` |
+| **Clustering** | supercluster groups satellites at low zoom levels |
+| **Heatmap** | Density visualization of satellite distribution |
+| **Terminator** | Day/night boundary via SunCalc |
+| **Coordinate Grid** | Toggleable graticule overlay |
+| **Orbit Track** | Polyline of upcoming path (3 or 10 orbits) |
+| **Anti-meridian** | Correct rendering across 180° longitude |
 
 ### 🛰️ Orbital Mechanics
 
-- **SGP4 propagation** — via `satellite.js` in a dedicated Web Worker
-- **Ground track** — polyline of upcoming orbit path (3 or 10 orbits)
-- **Anti-meridian fix** — continuous longitude unwrapping (170° → 190° instead of 170° → -170°)
-- **Coverage zone** — gradient footprint rings (inner / middle / outer) based on elevation angle
+- **SGP4 Propagation** — via `satellite.js` in Web Worker
+- **TLE Accuracy** — current data from CelesTrak
+- **Period, Inclination, RAAN** — extracted from TLE
+- **Footprint** — coverage zone calculation on Earth's surface
 
-### 📡 Data
+### 📡 Data Sources
 
-- **CelesTrak API** — live TLE data for GPS, GLONASS, Galileo, BeiDou, Starlink, ISS, Weather, and more
-- **TLE file upload** — load custom `.tle` / `.txt` / `.3le` files
-- **WebSocket** — real-time position updates via STOMP protocol
-- **Mock data** — offline fallback for development
+| Source | Description |
+|--------|-------------|
+| **CelesTrak API** | Current TLE for all constellations |
+| **Mock Data** | Offline fallback for development |
+| **Backend API** | Optional: connection to backend server |
+| **WebSocket (STOMP)** | Real-time updates (optional) |
 
 ### 🔍 Filtering & Search
 
-- **Group filter** — toggle constellations (GPS, GLONASS, Galileo, BeiDou, Starlink, etc.)
-- **Orbit type filter** — LEO / MEO / GEO / HEO
-- **Purpose filter** — navigation, communications, earth-observation, scientific
-- **Text search** — search across all satellites by name (ignores group filter)
-- **Viewport filter** — show only satellites in current map view
-- **Performance mode** — limit rendered satellites (configurable cap, default 500)
+- **Group Filter** — toggle constellations on/off
+- **Orbit Type Filter** — LEO / MEO / GEO / HEO
+- **Purpose Filter** — navigation, communications, earth-observation, scientific
+- **Text Search** — search by name (ignores group filter)
+- **Viewport Filter** — show only visible satellites
+- **Display Limit** — configurable cap (default 500)
 
 ### 🌐 Constellation Comparison
 
-- **Multi-select** — choose up to 4 constellations
-- **Stats table** — total count, active count, average altitude, average velocity, min/max altitude, Earth coverage %
-- **Best-value highlighting** — green highlight for best metric per row
-- **Bottom drawer** — collapsible panel below the map
+- **Multi-select** — up to 4 constellations simultaneously
+- **Statistics**: count, average altitude, average velocity, min/max altitude
+- **Bottom Drawer** — collapsible panel below the map
 
 ### 📋 Satellite Detail Card
 
-- Live position (lat / lon / alt / velocity)
+- Current position (lat / lon / alt / velocity)
 - Orbital parameters (period, inclination, RAAN, eccentricity)
-- Next pass prediction (AOS / LOS / max elevation) for selected observation point
-- Actions: center on map, orbit track, full track (10 orbits), coverage zone toggle, satellite link (KSP-style chain)
+- Pass prediction (AOS / LOS / max elevation)
+- Actions: center, orbit track, full track, coverage zone
 
-### 🔔 Pass Prediction & Alerts
+### 🔔 Pass Prediction
 
-- **Pass predictor** — computes AOS / LOS / max elevation for a ground point
-- **Notifications** — toast alerts before upcoming passes
-- **Observation points** — draggable pins, location presets
+- **Pass Predictor** — AOS/LOS/elevation calculation
+- **Notification Toast** — alerts before upcoming passes
+- **Observation Points** — up to 5 draggable ground points
+- **Location Presets** — city presets (Moscow, Washington, Tokyo, etc.)
 
 ### ⚙️ Settings
 
-- Language toggle (RU / EN)
-- Map theme selector
-- Display mode (2D / 3D tilt / 3D globe)
-- Coverage zone settings (gradient rings, min elevation angle)
-- Heatmap toggle
-- Coordinate grid toggle
-- Simulation timeline (play/pause, speed control)
+- 🌐 Language toggle (RU / EN)
+- 🎨 Map theme selector (4 themes)
+- 📐 Display mode (2D / 3D-tilt / 3D-globe)
+- 🔭 Coverage zone settings (boundary angles)
+- 🌡️ Heatmap toggle
+- 📏 Coordinate grid toggle
+- ⏱️ Simulation timeline
 
 ---
 
 ## Tech Stack
 
-| Layer        | Technology                        |
-| ------------ | --------------------------------- |
-| Framework    | Next.js 16 (App Router)           |
-| Language     | TypeScript 5 (strict)             |
-| Styling      | Tailwind CSS 3                    |
-| 2D Map       | MapLibre GL + react-map-gl        |
-| 3D Globe     | React Three Fiber + Three.js      |
-| State        | Zustand                           |
-| Orbital calc | satellite.js (SGP4) in Web Worker |
-| Clustering   | supercluster                      |
-| Sun position | SunCalc                           |
-| Real-time    | STOMP over WebSocket              |
-| Data source  | CelesTrak API                     |
+| Layer | Technology | Version |
+|-------|------------|---------|
+| **Framework** | Next.js | 16.2.0 |
+| **Language** | TypeScript | 5.x |
+| **UI** | React | 19.2.4 |
+| **Styling** | Tailwind CSS | 4.x |
+| **2D Map** | MapLibre GL + react-map-gl | 5.21 / 8.1 |
+| **3D Globe** | React Three Fiber + Three.js | 9.5 / 0.183 |
+| **State** | Zustand | 5.0.12 |
+| **SGP4** | satellite.js | 6.0.2 |
+| **Clustering** | supercluster | 8.0.1 |
+| **Sun** | SunCalc | 1.9.0 |
+| **WebSocket** | STOMP + SockJS | 7.3 / 1.6 |
+| **i18n** | Built-in | — |
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    Next.js App                       │
-│                                                      │
-│  ┌──────────────┐         ┌───────────────────────┐ │
-│  │  Left Sidebar │         │     Map Area          │ │
-│  │  (FilterPanel)│         │                       │ │
-│  │               │         │  ┌─────────────────┐  │ │
-│  │  GroupSelector│         │  │  SatelliteMap   │  │ │
-│  │  OrbitFilter  │         │  │  (MapLibre GL)  │  │ │
-│  │  PurposeFilter│         │  │                 │  │ │
-│  │  SearchInput  │         │  │  + GroundTrack  │  │ │
-│  │  Settings     │         │  │  + Coverage     │  │ │
-│  └──────────────┘         │  │  + Terminator   │  │ │
-│                            │  │  + Grid         │  │ │
-│                            │  └─────────────────┘  │ │
-│                            │                       │ │
-│                            │  ┌─────────────────┐  │ │
-│                            │  │ ComparisonDrawer│  │ │
-│                            │  └─────────────────┘  │ │
-│                            └───────────────────────┘ │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                        Next.js App                           │
+│  ┌────────────────┐           ┌──────────────────────────┐  │
+│  │  Sidebar       │           │     Map Area             │  │
+│  │  ────────────  │           │                          │  │
+│  │  SearchInput   │           │  ┌────────────────────┐  │  │
+│  │  GroupSelector │           │  │   SatelliteMap     │  │  │
+│  │  OrbitFilter   │           │  │   (MapLibre GL)    │  │  │
+│  │  PurposeFilter │           │  │                    │  │  │
+│  │  Settings      │           │  │  + GroundTrack     │  │  │
+│  │  ────────────  │           │  │  + Coverage        │  │  │
+│  │  PassList      │           │  │  + Terminator       │  │  │
+│  │                │           │  │  + Grid            │  │  │
+│  └────────────────┘           │  │  + Clusters        │  │  │
+│                              │  └────────────────────┘  │  │
+│                              │                          │  │
+│                              │  ┌────────────────────┐  │  │
+│                              │  │ ComparisonDrawer   │  │  │
+│                              │  └────────────────────┘  │  │
+│                              └──────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────┐
-│                  State Layer (Zustand)                │
-│                                                      │
-│  useSatelliteStore   useMapStore   useCoverageStore  │
-│  useSimulationStore                                  │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│               State Layer (Zustand)                           │
+│                                                              │
+│  useSatelliteStore   useMapStore   useCoverageStore         │
+│  useSimulationStore                                             │
+└─────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────┐
-│               Web Worker (SGP4)                      │
-│                                                      │
-│  satellite-worker.ts                                 │
-│  Input:  Satellite[] + timestamp                     │
-│  Output: SatellitePosition[] (lat/lon/alt/velocity)  │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│              Web Worker (SGP4 via satellite.js)               │
+│                                                              │
+│  satellite-worker.ts                                         │
+│  Input:  Satellite[] + timestamp                              │
+│  Output: SatellitePosition[] (lat/lon/alt/velocity)          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Data Flow
 
 ```
-CelesTrak API
-     │
-     ▼
+CelesTrak API / Backend
+        │
+        ▼
 getSatellites() → TLE parse → Satellite[]
-     │
-     ▼
+        │
+        ▼
 useSatelliteStore.setSatellites()
-     │
-     ▼
-satellite-worker.ts (SGP4 every tick)
-     │
-     ▼
+        │
+        ▼
+satellite-worker.ts (SGP4 every second)
+        │
+        ▼
 useSatelliteStore.updatePositions()
-     │
-     ▼
+        │
+        ▼
 SatelliteMap → GeoJSON → MapLibre GL layers
 ```
 
@@ -187,31 +213,18 @@ SatelliteMap → GeoJSON → MapLibre GL layers
 - **npm** 9+ (or pnpm / yarn)
 - Git
 
-### Clone and Install
+### Clone
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/satellite-tracker.git
+git clone <repository-url>
 cd satellite-tracker
+```
 
-# Install dependencies
+### Install Dependencies
+
+```bash
 npm install
 ```
-
-### Environment Variables
-
-Create `.env.local` in the project root:
-
-```env
-# Optional: WebSocket server URL for real-time updates
-# Leave empty to use mock data / CelesTrak only
-NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
-
-# Optional: override CelesTrak base URL
-NEXT_PUBLIC_CELESTRAK_URL=https://celestrak.org
-```
-
-> Without a WebSocket server the app works fully offline using CelesTrak HTTP API and SGP4 local computation.
 
 ---
 
@@ -223,32 +236,77 @@ NEXT_PUBLIC_CELESTRAK_URL=https://celestrak.org
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-Hot reload is enabled. Web Worker changes require a full page refresh.
+> Hot reload is enabled. Web Worker changes require a full page reload.
 
 ### Production Build
 
 ```bash
-# Build
+# Build optimized bundle
 npm run build
 
 # Start production server
 npm run start
 ```
 
-### Type Check
+### Docker
 
 ```bash
-# Check TypeScript without emitting files
-npx tsc --noEmit
+# Build and run
+docker-compose up --build
+
+# Run in background
+docker-compose up -d
 ```
 
-### Lint
+The application will be available at [http://localhost:3000](http://localhost:3000).
+
+### Checks
 
 ```bash
+# TypeScript type checking
+npx tsc --noEmit
+
+# ESLint linting
 npm run lint
 ```
+
+---
+
+## Docker
+
+The project includes a multi-stage Docker build for optimal image size.
+
+### docker-compose Configuration
+
+```yaml
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_USE_MOCK=true
+      - NEXT_PUBLIC_ENABLE_WS=false
+    restart: unless-stopped
+```
+
+### Docker Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NEXT_PUBLIC_USE_MOCK` | `true` | Use mock data / CelesTrak |
+| `NEXT_PUBLIC_ENABLE_WS` | `false` | Enable WebSocket |
+
+### Dockerfile Stages
+
+1. **deps** — install dependencies
+2. **builder** — build Next.js application
+3. **runner** — production runtime
 
 ---
 
@@ -258,69 +316,82 @@ npm run lint
 satellite-tracker/
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx          # Root layout
-│   │   └── page.tsx            # Main page — grid layout (sidebar + map)
+│   │   ├── layout.tsx              # Root layout
+│   │   └── page.tsx                # Main page
 │   │
 │   ├── components/
 │   │   ├── map/
-│   │   │   ├── SatelliteMap.tsx        # Main MapLibre GL map
-│   │   │   ├── Globe3D.tsx             # React Three Fiber 3D globe
-│   │   │   ├── GroundTrack.tsx         # Orbit polyline with anti-meridian fix
-│   │   │   ├── EnhancedCoverageZone.tsx# Gradient coverage footprint
-│   │   │   ├── CoverageCone.tsx        # Simple coverage cone
-│   │   │   ├── ClusterMarker.tsx       # Supercluster bubble markers
-│   │   │   ├── SatelliteLinks.tsx      # KSP-style chain links
-│   │   │   ├── CoordinateGrid.tsx      # Graticule overlay
-│   │   │   ├── Terminator.tsx          # Day/night boundary
-│   │   │   └── ObservationPins.tsx     # Draggable ground points
+│   │   │   ├── SatelliteMap.tsx        # MapLibre GL map
+│   │   │   ├── Globe3D.tsx             # 3D globe (R3F)
+│   │   │   ├── GroundTrack.tsx         # Orbit track
+│   │   │   ├── EnhancedCoverageZone.tsx# Coverage zone
+│   │   │   ├── CoverageCone.tsx        # Visibility cone
+│   │   │   ├── ClusterMarker.tsx       # Clusters
+│   │   │   ├── SatelliteLinks.tsx       # Satellite chains
+│   │   │   ├── CoordinateGrid.tsx      # Coordinate grid
+│   │   │   ├── Terminator.tsx          # Terminator
+│   │   │   └── ObservationPins.tsx     # Observation points
 │   │   │
 │   │   ├── ui/
 │   │   │   ├── FilterPanel.tsx         # Left sidebar
-│   │   │   ├── GroupSelector.tsx       # Constellation multi-select
-│   │   │   ├── MapSettings.tsx         # Settings dropdown (⚙️)
-│   │   │   ├── CoverageSettings.tsx    # Coverage zone settings
-│   │   │   ├── GroupComparisonTable.tsx# Side-by-side stats table
-│   │   │   ├── ComparisonDrawer.tsx    # Bottom drawer container
-│   │   │   ├── NotificationToast.tsx   # Pass alert toasts
-│   │   │   ├── AddPointButton.tsx      # Add observation point
-│   │   │   └── LocationPresets.tsx     # Preset city locations
+│   │   │   ├── GroupSelector.tsx       # Group selection
+│   │   │   ├── MapSettings.tsx         # Map settings
+│   │   │   ├── CoverageSettings.tsx    # Coverage settings
+│   │   │   ├── GroupComparisonTable.tsx# Comparison table
+│   │   │   ├── ComparisonDrawer.tsx    # Comparison drawer
+│   │   │   ├── NotificationToast.tsx    # Toast notifications
+│   │   │   ├── AddPointButton.tsx      # Add point
+│   │   │   ├── LocationPresets.tsx      # City presets
+│   │   │   ├── PointsPanel.tsx          # Points panel
+│   │   │   ├── SatelliteLimitSlider.tsx# Satellite limit
+│   │   │   ├── Timeline.tsx             # Timeline
+│   │   │   └── ZoomIndicator.tsx        # Zoom indicator
 │   │   │
 │   │   └── satellite/
-│   │       └── SatelliteCard.tsx       # Selected satellite detail panel
+│   │       ├── SatelliteCard.tsx        # Satellite card
+│   │       └── PassList.tsx             # Pass list
 │   │
 │   ├── store/
-│   │   ├── useSatelliteStore.ts        # Satellites, positions, filters, groups
-│   │   ├── useMapStore.ts              # Map state, themes, viewport, locale
-│   │   ├── useCoverageStore.ts         # Coverage zone settings
-│   │   └── useSimulationStore.ts       # Timeline simulation
+│   │   ├── useSatelliteStore.ts        # Satellites, positions, filters
+│   │   ├── useMapStore.ts               # Map state, themes
+│   │   ├── useCoverageStore.ts          # Coverage settings
+│   │   └── useSimulationStore.ts        # Timeline simulation
 │   │
 │   ├── lib/
-│   │   ├── satellite-worker.ts         # Web Worker — SGP4 position calculation
-│   │   ├── celestrak.ts                # CelesTrak API + TLE parser
-│   │   ├── coverage-geometry.ts        # Footprint polygon generation
-│   │   ├── unwrapCoordinates.ts        # Anti-meridian longitude fix
-│   │   ├── pass-predictor.ts           # AOS/LOS/elevation calculator
-│   │   ├── pass-notifier.ts            # Upcoming pass alert scheduler
-│   │   ├── terminator.ts               # SunCalc day/night boundary
-│   │   ├── ws-client.ts                # STOMP WebSocket client
-│   │   ├── api.ts                      # HTTP API wrapper
-│   │   ├── mock-data.ts                # Offline fallback data
-│   │   ├── viewport-filter.ts          # Bounds-based satellite filter
-│   │   └── i18n.ts                     # RU/EN translations
+│   │   ├── satellite-worker.ts          # Web Worker — SGP4
+│   │   ├── celestrak.ts                 # CelesTrak API
+│   │   ├── coverage-geometry.ts        # Footprint polygons
+│   │   ├── unwrapCoordinates.ts         # Anti-meridian fix
+│   │   ├── pass-predictor.ts            # AOS/LOS calculation
+│   │   ├── pass-notifier.ts             # Pass notifications
+│   │   ├── terminator.ts                # SunCalc terminator
+│   │   ├── ws-client.ts                 # STOMP WebSocket
+│   │   ├── api.ts                       # HTTP API wrapper
+│   │   ├── mock-data.ts                 # Mock data
+│   │   ├── viewport-filter.ts           # Viewport filter
+│   │   ├── viewport-filter-3d.ts        # 3D viewport filter
+│   │   ├── presets.ts                   # Point presets
+│   │   └── i18n.ts                      # RU/EN translations
 │   │
 │   ├── hooks/
-│   │   ├── useSupercluster.ts          # Clustering hook
-│   │   ├── useGroupStats.ts            # Constellation aggregated stats
-│   │   └── useStopMapPropagation.ts    # Prevent map click-through
+│   │   ├── useSupercluster.ts           # Clustering
+│   │   ├── useGroupStats.ts             # Constellation stats
+│   │   └── useStopMapPropagation.ts     # Click blocking
 │   │
-│   └── types/
-│       └── satellite.ts                # Core TypeScript types
+│   ├── types/
+│   │   └── satellite.ts                 # TypeScript types
+│   │
+│   └── app/api/
+│       ├── celestrak-proxy/             # CelesTrak proxy
+│       └── proxy/                       # Universal proxy
 │
-├── public/
-├── .env.local                          # Environment variables (create manually)
-├── next.config.ts
-├── tailwind.config.ts
-└── tsconfig.json
+├── public/                              # Static files
+├── Dockerfile                           # Multi-stage build
+├── docker-compose.yml                  # Docker Compose
+├── next.config.ts                      # Next.js config
+├── tailwind.config.ts                  # Tailwind CSS
+├── tsconfig.json                      # TypeScript
+└── package.json                       # Dependencies
 ```
 
 ---
@@ -329,101 +400,152 @@ satellite-tracker/
 
 ### `satellite-worker.ts`
 
-Web Worker that runs SGP4 propagation off the main thread.
+Web Worker runs SGP4 propagation off the main thread.
 
-- Input: `{ type: 'CALCULATE', payload: { satellites, timestamp } }`
-- Output: `{ type: 'POSITIONS', payload: SatellitePosition[] }`
-- Batches all satellites in a single `postMessage` to minimize IPC overhead
+```typescript
+// Input message
+{ type: 'CALCULATE', payload: { satellites: Satellite[], timestamp: number } }
+
+// Output message
+{ type: 'POSITIONS', payload: SatellitePosition[] }
+```
 
 ### `unwrapCoordinates.ts`
 
-Fixes the anti-meridian crossing artifact in ground tracks.
+Fixes anti-meridian crossing artifact.
 
 ```typescript
-// Without fix: 170° → -170° → MapLibre draws line across entire map
-// With fix:    170° → 190°  → continuous longitude, correct rendering
+// Without fix: 170° → -170° (line across entire map)
+// With fix:    170° → 190° (continuous longitude)
 unwrapLongitudes(coords: [number, number][]): [number, number][]
 splitIntoOrbits(coords, pointsPerOrbit): [number, number][][]
 ```
 
 ### `coverage-geometry.ts`
 
-Computes satellite ground footprint as GeoJSON polygons.
+Calculates satellite ground footprint.
 
-- Uses Earth central angle formula: `ρ = arccos(R / (R + alt))`
-- Generates 1–5 concentric rings (inner / middle / outer zones)
-- Each ring is a separate GeoJSON Feature with `zone` property for MapLibre `case` expressions
+- Central angle formula: `ρ = arccos(R / (R + alt))`
+- Gradient rings: inner / middle / outer zones
+- GeoJSON FeatureCollection for MapLibre
 
 ### `pass-predictor.ts`
 
-Predicts when a satellite will be visible from a ground point.
+Predicts satellite pass over ground point.
 
-- Returns: `{ aos: Date, los: Date, maxElevationDeg: number }`
-- Uses 60-second step propagation over a 24-hour window
+- **AOS** (Acquisition of Signal) — appearance above horizon
+- **LOS** (Loss of Signal) — disappearance below horizon
+- **Max Elevation** — maximum elevation angle
+- Calculation step: 60 seconds, window: 24 hours
 
 ### `celestrak.ts`
 
-Fetches and parses TLE data from CelesTrak.
-
-- Supports all major groups: GPS, GLONASS, Galileo, BeiDou, Starlink, ISS, Weather, Debris
-- Parses period, inclination, RAAN, eccentricity directly from TLE lines
+CelesTrak API integration for current TLE data.
 
 ---
 
 ## Configuration
 
-### Adding a new satellite group
+### Adding a Constellation
 
-In `src/types/satellite.ts`:
+In [`src/types/satellite.ts`](src/types/satellite.ts):
 
 ```typescript
-export const GROUP_CONFIG = {
+export const GROUP_CONFIG: Record<SatelliteGroup, {...}> = {
   // Add new entry:
   oneweb: {
-    label: "OneWeb",
+    name: "OneWeb",
+    description: "OneWeb constellation",
     filter: { q: "ONEWEB" },
-    color: "#ff6600",
+    icon: '🌐'
   },
-};
+}
 ```
 
-### Adding a new map theme
+### Adding a Map Theme
 
-In `src/store/useMapStore.ts`:
+In [`src/store/useMapStore.ts`](src/store/useMapStore.ts):
 
 ```typescript
-export const MAP_THEMES = {
-  // Add new entry:
+export const MAP_THEMES: Record<MapTheme, { label: string; tiles: string[] }> = {
   topo: {
     label: "Topographic",
     tiles: ["https://tile.opentopomap.org/{z}/{x}/{y}.png"],
   },
-};
+}
 ```
 
-### Adding translations
+### Adding Translation
 
-In `src/lib/i18n.ts`:
+In [`src/lib/i18n.ts`](src/lib/i18n.ts):
 
 ```typescript
-'my.new.key': {
-  en: 'English text',
-  ru: 'Русский текст',
-},
+export const translations = {
+  'my.new.key': {
+    en: 'English text',
+    ru: 'Русский текст',
+  },
+}
 ```
+
+---
+
+## Environment Variables
+
+### `.env.local` file
+
+Create a `.env.local` file in the project root:
+
+```env
+# ============================================
+# Operation Mode
+# ============================================
+
+# Use mock data / CelesTrak (default: true)
+NEXT_PUBLIC_USE_MOCK=true
+
+# Enable WebSocket (default: false)
+NEXT_PUBLIC_ENABLE_WS=false
+
+# ============================================
+# API URLs
+# ============================================
+
+# Backend API URL (default: http://localhost:8888)
+NEXT_PUBLIC_API_URL=http://localhost:8888
+
+# CelesTrak URL (default: https://celestrak.org)
+NEXT_PUBLIC_CELESTRAK_URL=https://celestrak.org
+
+# WebSocket URL (default: ws://localhost:8080/ws)
+NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
+
+# ============================================
+# Limits
+# ============================================
+
+# Maximum satellites to load from CelesTrak (default: 200)
+# Not recommended to set above 500 — browser may freeze
+NEXT_PUBLIC_CELESTRAK_LIMIT=200
+```
+
+### Frontend-only Variables
+
+All variables with `NEXT_PUBLIC_` prefix are available in the browser.
 
 ---
 
 ## Known Limitations
 
-| Issue                                                    | Status                               |
-| -------------------------------------------------------- | ------------------------------------ |
-| CelesTrak rate limiting on first load                    | Handled via caching; reload if empty |
-| TLE data becomes stale after ~2 weeks                    | Use 🔄 Refresh button                |
-| 3D globe lacks satellite markers (R3F layer)             | Planned                              |
-| Coverage zone shows at satellite's current position only | By design — updates each tick        |
-| WebSocket requires separate backend server               | Optional; app works without it       |
-| Pass prediction accuracy: ±1 min                         | 60-second step resolution            |
+| Issue | Status |
+|-------|--------|
+| CelesTrak rate limiting on first load | Caching applied; reload if empty |
+| TLE data becomes stale after ~2 weeks | Use 🔄 Refresh button |
+| 3D globe doesn't show satellite markers | Planned |
+| Coverage zone shows current position only | By design — updates every second |
+| WebSocket requires backend | Optional; works without it |
+| Pass prediction accuracy: ±1 min | 60-second calculation step |
+| Limit of 5 observation points | UI technical limit |
 
 ---
 
@@ -433,4 +555,4 @@ MIT © 2024
 
 ---
 
-_Built with [satellite.js](https://github.com/shashwatak/satellite-js), [MapLibre GL](https://maplibre.org), [CelesTrak](https://celestrak.org)_
+_Built with [satellite.js](https://github.com/shashwatak/satellite-js), [MapLibre GL](https://maplibre.org), [React Three Fiber](https://docs.pmnd.rs/react-three-fiber), [CelesTrak](https://celestrak.org)_

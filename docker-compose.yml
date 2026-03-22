@@ -1,0 +1,14 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_CELESTRAK_URL: https://celestrak.org
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_USE_MOCK=true
+      - NEXT_PUBLIC_ENABLE_WS=false
+    restart: unless-stopped
