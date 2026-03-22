@@ -48,7 +48,6 @@ export default function SatelliteMap() {
   const selectSatellite = useSatelliteStore((s) => s.selectSatellite)
   const selectedSatellite = useSatelliteStore((s) => s.selectedSatellite)
   const performanceMode = useSatelliteStore((s) => s.performanceMode)
-  const activeCoverageNoradIds = useSatelliteStore((s) => s.activeCoverageNoradIds)
   const performanceLimit = useSatelliteStore((s) => s.performanceLimit)
 
   const showGroundTrack = useMapStore((s) => s.showGroundTrack)
@@ -457,11 +456,11 @@ export default function SatelliteMap() {
         <GroundTrack />
       )}
 
-      {/* Global coverage zone for selected satellite when showCoverage is enabled */}
-      {showCoverage && selectedSatellite && positions.has(selectedSatellite.noradId) && !activeCoverageNoradIds.has(String(selectedSatellite.noradId)) && (
+      {/* Coverage zone for selected satellite when showCoverage is enabled */}
+      {showCoverage && selectedSatellite && positions.has(selectedSatellite.noradId) && (
         <EnhancedCoverageZone
-          key={`coverage-global-${selectedSatellite.noradId}`}
-          noradId={`global-${selectedSatellite.noradId}`}
+          key={`coverage-${selectedSatellite.noradId}`}
+          noradId={String(selectedSatellite.noradId)}
           position={{
             lat: positions.get(selectedSatellite.noradId)!.lat,
             lon: positions.get(selectedSatellite.noradId)!.lon,
@@ -469,19 +468,6 @@ export default function SatelliteMap() {
           }}
         />
       )}
-
-      {Array.from(activeCoverageNoradIds).map((noradId) => {
-        const pos = positions.get(Number(noradId))
-        if (!pos) return null
-        return (
-          <EnhancedCoverageZone
-            key={`coverage-${noradId}`}
-            noradId={noradId}
-            position={{ lat: pos.lat, lon: pos.lon, alt: pos.alt }}
-            forceShow={true}
-          />
-        )
-      })}
     </Map>
   )
 }

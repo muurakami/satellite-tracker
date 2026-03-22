@@ -9,30 +9,30 @@ import { generateGradientCoverage, type CoveragePoint } from '@/lib/coverage-geo
 export interface EnhancedCoverageZoneProps {
   position: CoveragePoint
   noradId: string
-  /** Override showCoverage check from coverageStore — for individual satellite zones */
-  forceShow?: boolean
 }
 
-export default function EnhancedCoverageZone({ position, noradId, forceShow }: EnhancedCoverageZoneProps) {
-  const { showCoverage, showGradient, minElevationDeg, gradientRings } = useCoverageStore()
+export default function EnhancedCoverageZone({
+  position,
+  noradId,
+}: EnhancedCoverageZoneProps) {
+  const { showCoverage, showGradient, minElevationDeg, gradientRings } =
+    useCoverageStore()
+
+  const sourceId = `coverage-source-${noradId}`
+  const fillLayerId = `coverage-fill-${noradId}`
+  const borderLayerId = `coverage-border-${noradId}`
 
   const coverageData = useMemo((): FeatureCollection<Polygon> | null => {
-    // Skip showCoverage check if forceShow=true (for individual satellite zones)
-    if (!forceShow && !showCoverage) return null
+    if (!showCoverage) return null
 
     return generateGradientCoverage(
       position,
       minElevationDeg,
       showGradient ? gradientRings : 1
     )
-  }, [position, forceShow, showCoverage, showGradient, minElevationDeg, gradientRings])
+  }, [position, showCoverage, showGradient, minElevationDeg, gradientRings])
 
   if (!coverageData || coverageData.features.length === 0) return null
-
-  // Unique IDs for multiple coverage zones
-  const sourceId = `coverage-source-${noradId}`
-  const fillLayerId = `coverage-fill-${noradId}`
-  const borderLayerId = `coverage-border-${noradId}`
 
   return (
     <Source

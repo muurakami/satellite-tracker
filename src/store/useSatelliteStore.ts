@@ -44,8 +44,6 @@ interface SatelliteStore {
   passAlerts: PassAlert[]
   // Comparison groups (for table)
   comparisonGroups: SatelliteGroup[]
-  // Coverage zones (individual satellites)
-  activeCoverageNoradIds: Set<string>
   // Actions
   setSatellites: (s: Satellite[]) => void
   updatePositions: (positions: SatellitePosition[]) => void
@@ -66,7 +64,6 @@ interface SatelliteStore {
   toggleComparisonGroup: (group: SatelliteGroup) => void
   removeComparisonGroup: (group: SatelliteGroup) => void
   clearComparisonGroups: () => void
-  toggleSatelliteCoverage: (noradId: string) => void
   // Computed getters
   filteredSatellites: () => Satellite[]
   filteredByGroups: () => Satellite[]
@@ -87,7 +84,6 @@ export const useSatelliteStore = create<SatelliteStore>((set, get) => ({
   linkedSatellites: [],
   passAlerts: [],
   comparisonGroups: [],
-  activeCoverageNoradIds: new Set<string>(),
 
   setSatellites: (satellites) => set({ satellites }),
 
@@ -193,17 +189,6 @@ export const useSatelliteStore = create<SatelliteStore>((set, get) => ({
     })),
 
   clearComparisonGroups: () => set({ comparisonGroups: [] }),
-
-  toggleSatelliteCoverage: (noradId) =>
-    set((state) => {
-      const next = new Set(state.activeCoverageNoradIds)
-      if (next.has(noradId)) {
-        next.delete(noradId)
-      } else {
-        next.add(noradId)
-      }
-      return { activeCoverageNoradIds: next }
-    }),
 
   getSatelliteLinks: (): SatelliteLink[] => {
     const { linkedSatellites } = get()
