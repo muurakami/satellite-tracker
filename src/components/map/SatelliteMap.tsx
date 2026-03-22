@@ -7,6 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Point } from 'geojson'
 import { useSatelliteStore } from '@/store/useSatelliteStore'
 import { useMapStore, MAP_THEMES, type MapBounds } from '@/store/useMapStore'
+import { useCoverageStore } from '@/store/useCoverageStore'
 import { useSimulationStore } from '@/store/useSimulationStore'
 import { getSatellites } from '@/lib/api'
 import wsClient from '@/lib/ws-client'
@@ -14,7 +15,7 @@ import { filterByViewport } from '@/lib/viewport-filter'
 import { useSupercluster, useZoomFilteredSatellites, type SatelliteFeature } from '@/hooks/useSupercluster'
 import type { OrbitType, WorkerMessageIn, WorkerMessageOut } from '@/types/satellite'
 import GroundTrack from './GroundTrack'
-import CoverageCone from './CoverageCone'
+import EnhancedCoverageZone from './EnhancedCoverageZone'
 import ClusterMarker from './ClusterMarker'
 import SatelliteLinks from './SatelliteLinks'
 import CoordinateGrid from './CoordinateGrid'
@@ -47,10 +48,11 @@ export default function SatelliteMap() {
   const selectSatellite = useSatelliteStore((s) => s.selectSatellite)
   const selectedSatellite = useSatelliteStore((s) => s.selectedSatellite)
   const performanceMode = useSatelliteStore((s) => s.performanceMode)
+  const activeCoverageNoradIds = useSatelliteStore((s) => s.activeCoverageNoradIds)
   const performanceLimit = useSatelliteStore((s) => s.performanceLimit)
 
   const showGroundTrack = useMapStore((s) => s.showGroundTrack)
-  const showCoverage = useMapStore((s) => s.showCoverage)
+  const showCoverage = useCoverageStore((s) => s.showCoverage)
   const setSelectedPoint = useMapStore((s) => s.setSelectedPoint)
   const addObservationPoint = useMapStore((s) => s.addObservationPoint)
   const isAddingPoint = useMapStore((s) => s.isAddingPoint)
@@ -455,13 +457,31 @@ export default function SatelliteMap() {
         <GroundTrack />
       )}
 
-      {showCoverage && selectedSatellite && (
-        <CoverageCone
-          satelliteId={selectedSatellite.noradId}
-          satellites={satellites}
-          positions={positions}
+      {/* Global coverage zone for selected satellite when showCoverage is enabled */}
+      {showCoverage && selectedSatellite && positions.has(selectedSatellite.noradId) && !activeCoverageNoradIds.has(String(selectedSatellite.noradId)) && (
+        <EnhancedCoverageZone
+          key={`coverage-global-${selectedSatellite.noradId}`}
+          noradId={`global-${selectedSatellite.noradId}`}
+          position={{
+            lat: positions.get(selectedSatellite.noradId)!.lat,
+            lon: positions.get(selectedSatellite.noradId)!.lon,
+            alt: positions.get(selectedSatellite.noradId)!.alt,
+          }}
         />
       )}
+
+      {Array.from(activeCoverageNoradIds).map((noradId) => {
+        const pos = positions.get(Number(noradId))
+        if (!pos) return null
+        return (
+          <EnhancedCoverageZone
+            key={`coverage-${noradId}`}
+            noradId={noradId}
+            position={{ lat: pos.lat, lon: pos.lon, alt: pos.alt }}
+            forceShow={true}
+          />
+        )
+      })}
     </Map>
   )
 }

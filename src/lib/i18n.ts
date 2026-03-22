@@ -125,6 +125,20 @@ const translations = {
   'comparison.avgVelocityKmS': { ru: 'Средняя скорость', en: 'Avg velocity' },
   'comparison.minAltitudeKm': { ru: 'Мин. высота', en: 'Min altitude' },
   'comparison.maxAltitudeKm': { ru: 'Макс. высота', en: 'Max altitude' },
+
+  // SatelliteCard coverage buttons
+  'satellite.showCoverage': { ru: 'Зона покрытия', en: 'Coverage zone' },
+  'satellite.hideCoverage': { ru: 'Скрыть зону', en: 'Hide coverage' },
+
+  // CoverageSettings
+  'coverage.showCoverageZone': { ru: 'Зона покрытия', en: 'Coverage zone' },
+  'coverage.antennaType': { ru: 'Тип антенны', en: 'Antenna type' },
+  'coverage.minElevation': { ru: 'Мин. угол', en: 'Min elevation' },
+  'coverage.gradientRings': { ru: 'Градиентные кольца', en: 'Gradient rings' },
+  'coverage.signalStrength': { ru: 'Сила сигнала', en: 'Signal strength' },
+  'coverage.high': { ru: 'Высокий (зенит)', en: 'High (zenith)' },
+  'coverage.medium': { ru: 'Средний', en: 'Medium' },
+  'coverage.low': { ru: 'Низкий (край)', en: 'Low (edge)' },
 } as const
 
 type TranslationKey = keyof typeof translations | string

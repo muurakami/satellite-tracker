@@ -10,6 +10,7 @@ import GroupSelector from './GroupSelector'
 import AddPointButton from './AddPointButton'
 import LocationPresets from './LocationPresets'
 import SatelliteLimitSlider from './SatelliteLimitSlider'
+import CoverageSettings from './CoverageSettings'
 
 const ORBIT_OPTIONS: (OrbitType | '')[] = ['', 'LEO', 'MEO', 'GEO', 'HEO']
 const PURPOSE_OPTIONS: (SatellitePurpose | '')[] = [
@@ -288,6 +289,11 @@ export default function FilterPanel() {
         >
           {showFullTrack ? `🌐 ${t('settings.fullTrack', locale)}` : `⭕ ${t('settings.fullTrack', locale)}`}
         </button>
+
+        {/* Coverage Settings */}
+        <div className="border-t border-zinc-700 pt-3">
+          <CoverageSettings />
+        </div>
       </div>
     </div>
   )

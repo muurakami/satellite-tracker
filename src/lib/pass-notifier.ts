@@ -38,7 +38,7 @@ export function startPassNotifier(): () => void {
             satelliteId: pass.noradId,
             satelliteName: pass.name,
             aos: new Date(pass.aos),
-            maxElevationDeg: pass.maxElevationDeg,
+            maxElevationDeg: pass.maxElevationDeg ?? 0,
             minutesUntil,
             dismissed: false,
           }

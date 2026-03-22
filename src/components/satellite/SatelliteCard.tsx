@@ -19,12 +19,12 @@ export default function SatelliteCard() {
   const selectedSatellite = useSatelliteStore((s) => s.selectedSatellite)
   const positions = useSatelliteStore((s) => s.positions)
   const selectSatellite = useSatelliteStore((s) => s.selectSatellite)
+  const toggleSatelliteCoverage = useSatelliteStore((s) => s.toggleSatelliteCoverage)
+  const activeCoverageNoradIds = useSatelliteStore((s) => s.activeCoverageNoradIds)
   const toggleGroundTrack = useMapStore((s) => s.toggleGroundTrack)
-  const toggleCoverage = useMapStore((s) => s.toggleCoverage)
   const toggleFullTrack = useMapStore((s) => s.toggleFullTrack)
   const selectedPoint = useMapStore((s) => s.selectedPoint)
   const showGroundTrack = useMapStore((s) => s.showGroundTrack)
-  const showCoverage = useMapStore((s) => s.showCoverage)
   const showFullTrack = useMapStore((s) => s.showFullTrack)
   const locale = useMapStore((s) => s.locale)
   const linkedSatellites = useSatelliteStore((s) => s.linkedSatellites)
@@ -34,6 +34,7 @@ export default function SatelliteCard() {
   if (!selectedSatellite) return null
 
   const pos = positions.get(selectedSatellite.noradId)
+  const isCoverageActive = activeCoverageNoradIds.has(String(selectedSatellite.noradId))
   const isLinked = linkedSatellites.includes(selectedSatellite.noradId)
 
   return (
@@ -137,14 +138,14 @@ export default function SatelliteCard() {
           {t('card.orbitTrack', locale)}
         </button>
         <button
-          onClick={toggleCoverage}
+          onClick={() => toggleSatelliteCoverage(String(selectedSatellite.noradId))}
           className={`px-3 py-1.5 rounded text-sm ${
-            showCoverage
-              ? 'bg-rose-600 text-white'
+            isCoverageActive
+              ? 'bg-emerald-600 text-white'
               : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
           }`}
         >
-          {t('card.coverageZone', locale)}
+          🌐 {isCoverageActive ? t('satellite.hideCoverage', locale) : t('satellite.showCoverage', locale)}
         </button>
         <button
           onClick={toggleFullTrack}
